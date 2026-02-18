@@ -148,7 +148,7 @@ class AiriaBridge:
             return None
         try:
             from airia import AiriaClient
-            self._client = AiriaClient(api_key=config.airia_api_key)
+            self._client = AiriaClient(api_key=config.airia_api_key, timeout=120)
             self._available = True
             console.print("[green]Airia SDK connected[/]")
             return self._client
