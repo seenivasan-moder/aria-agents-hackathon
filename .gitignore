@@ -10,7 +10,7 @@ __pycache__/
 .venv/
 
 # Data (generated at runtime)
-data/sentinel.db
+data/sentinel*.db
 data/sentinel.db-wal
 data/sentinel.db-shm
 data/reports/*.pdf
