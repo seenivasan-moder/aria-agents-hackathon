@@ -27,7 +27,7 @@ console = Console()
 # UTILITIES
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def narrate(text: str, pause: float = 1.5) -> None:
+def narrate(text: str, pause: float = 0.8) -> None:
     """Print narration text with a pause for video recording."""
     console.print(f"\n[bold white on blue]  {text}  [/]")
     time.sleep(pause)
@@ -60,9 +60,10 @@ def section_divider(title: str) -> None:
 # DEMO STEPS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-async def step_intro() -> None:
+async def step_intro(clear_screen: bool = True) -> None:
     """Step 0: Cinematic intro — problem + solution."""
-    console.clear()
+    if clear_screen:
+        console.clear()
 
     # Big banner
     console.print(Panel(
@@ -81,7 +82,7 @@ async def step_intro() -> None:
         padding=(1, 2),
     ))
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
     # Problem statement
     console.print(Panel(
@@ -97,7 +98,7 @@ async def step_intro() -> None:
         padding=(0, 2),
     ))
 
-    await asyncio.sleep(3)
+    await asyncio.sleep(1.5)
 
     # Solution
     console.print(Panel(
@@ -113,7 +114,7 @@ async def step_intro() -> None:
         padding=(0, 2),
     ))
 
-    await asyncio.sleep(3)
+    await asyncio.sleep(1.5)
 
 
 async def step_scenario() -> None:
@@ -135,7 +136,7 @@ async def step_scenario() -> None:
         padding=(0, 2),
     ))
 
-    await asyncio.sleep(3)
+    await asyncio.sleep(1.5)
 
 
 async def step_architecture() -> None:
@@ -159,7 +160,7 @@ async def step_architecture() -> None:
         padding=(0, 2),
     ))
 
-    await asyncio.sleep(3)
+    await asyncio.sleep(1.5)
 
 
 async def step_system_check() -> None:
@@ -209,7 +210,7 @@ async def step_system_check() -> None:
     table.add_row("SQLite Audit", "[bold green]READY[/]", str(config.db_path))
 
     console.print(table)
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
 
 async def step_run_pipeline() -> None:
@@ -233,7 +234,7 @@ async def step_run_pipeline() -> None:
         corporate_context.run(run_id),
     )
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
     # ── Agent 3: Consensus ────────────────────────────────────────────────
     section_divider("PHASE 2: MULTI-IA CONSENSUS")
@@ -242,7 +243,7 @@ async def step_run_pipeline() -> None:
 
     consensus_result = await consensus_strategy.run(run_id, signals, exposure)
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
     # ── Agent 4: Compliance ───────────────────────────────────────────────
     section_divider("PHASE 3: COMPLIANCE & REPORT")
@@ -259,7 +260,7 @@ async def step_run_pipeline() -> None:
         latency_ms=total_ms,
     )
 
-    await asyncio.sleep(1)
+    await asyncio.sleep(0.5)
     return report, total_ms
 
 
@@ -289,7 +290,7 @@ async def step_hitl_simulation(report) -> None:
         padding=(0, 2),
     ))
 
-    await asyncio.sleep(3)
+    await asyncio.sleep(1.5)
 
     # Simulate approval
     narrate("CFO reviews the report and approves the strategy...", pause=2)
@@ -307,7 +308,7 @@ async def step_hitl_simulation(report) -> None:
         padding=(0, 2),
     ))
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
 
 async def step_summary(report, total_ms: float) -> None:
@@ -341,7 +342,7 @@ async def step_summary(report, total_ms: float) -> None:
         padding=(0, 1),
     ))
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
     # Tech stack summary
     console.print(Panel(
@@ -362,7 +363,7 @@ async def step_summary(report, total_ms: float) -> None:
         padding=(0, 2),
     ))
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
     # Final message
     console.print()
@@ -378,11 +379,11 @@ async def step_summary(report, total_ms: float) -> None:
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════════════════
 
-async def run_demo():
+async def run_demo(clear_screen: bool = True):
     """Run the complete demo scenario with cinematic narration."""
     try:
         # Act 1: Introduction
-        await step_intro()
+        await step_intro(clear_screen=clear_screen)
 
         # Act 2: Scenario setup
         await step_scenario()

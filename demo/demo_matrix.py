@@ -38,7 +38,7 @@ console = Console()
 # UTILITIES
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def narrate(text: str, pause: float = 1.5) -> None:
+def narrate(text: str, pause: float = 0.8) -> None:
     console.print(f"\n[bold white on blue]  {text}  [/]")
     time.sleep(pause)
 
@@ -180,9 +180,10 @@ async def step_aggregate(run_id: str, input_data: Any) -> StepResult:
 # DEMO STEPS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-async def demo_intro() -> None:
+async def demo_intro(clear_screen: bool = True) -> None:
     """Cinematic intro."""
-    console.clear()
+    if clear_screen:
+        console.clear()
 
     console.print(Panel(
         Align.center(Text.from_markup(
@@ -200,7 +201,7 @@ async def demo_intro() -> None:
         padding=(1, 2),
     ))
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
     console.print(Panel(
         "[bold white]THREE ORCHESTRATION PATTERNS[/]\n\n"
@@ -219,7 +220,7 @@ async def demo_intro() -> None:
         padding=(0, 2),
     ))
 
-    await asyncio.sleep(3)
+    await asyncio.sleep(1)
 
 
 async def demo_domino() -> PipelineResult:
@@ -244,7 +245,7 @@ async def demo_domino() -> PipelineResult:
     result = await pipeline.execute(run_id)
     print_pipeline_result(result)
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
     return result
 
 
@@ -266,7 +267,7 @@ async def demo_vectorial(domino_data: Any) -> PipelineResult:
     result = await pipeline.execute(run_id, domino_data)
     print_pipeline_result(result)
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
     return result
 
 
@@ -290,7 +291,7 @@ async def demo_matrix() -> PipelineResult:
     result = await pipeline.execute(run_id)
     print_pipeline_result(result)
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
     return result
 
 
@@ -332,7 +333,7 @@ async def demo_composite() -> PipelineResult:
     result = await composite.execute(run_id)
     print_pipeline_result(result)
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
     return result
 
 
@@ -375,7 +376,7 @@ async def demo_summary(results: list[PipelineResult]) -> None:
         border_style="green",
     ))
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
     console.print(Panel(
         "[bold white]Matrix Architecture Stack[/]\n\n"
@@ -405,12 +406,12 @@ async def demo_summary(results: list[PipelineResult]) -> None:
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════════════════
 
-async def run_demo() -> None:
+async def run_demo(clear_screen: bool = True) -> None:
     """Run the Matrix demo showcasing all 3 orchestration patterns."""
     try:
         results = []
 
-        await demo_intro()
+        await demo_intro(clear_screen=clear_screen)
 
         # Pattern 1: Domino
         r1 = await demo_domino()

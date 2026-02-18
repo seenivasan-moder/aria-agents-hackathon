@@ -162,9 +162,9 @@ async def _demo_all():
         try:
             mod = __import__(module_path, fromlist=["run_demo"])
             if name == "ORGANIZER":
-                await mod.run_demo("")
+                await mod.run_demo("", clear_screen=False)
             else:
-                await mod.run_demo()
+                await mod.run_demo(clear_screen=False)
             elapsed = time.monotonic() - t0
             results.append((name, "OK", elapsed))
             console.print(f"\n[green]{name} done[/] in {elapsed:.1f}s\n")

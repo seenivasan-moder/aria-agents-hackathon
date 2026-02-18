@@ -27,7 +27,7 @@ console = Console()
 # UTILITIES
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def narrate(text: str, pause: float = 1.5) -> None:
+def narrate(text: str, pause: float = 0.8) -> None:
     console.print(f"\n[bold white on blue]  {text}  [/]")
     time.sleep(pause)
 
@@ -99,9 +99,10 @@ DEMO_COMMANDS = [
 # DEMO STEPS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-async def step_intro() -> None:
+async def step_intro(clear_screen: bool = True) -> None:
     """Intro: present the JARVIS use case."""
-    console.clear()
+    if clear_screen:
+        console.clear()
 
     console.print(Panel(
         Align.center(Text.from_markup(
@@ -119,7 +120,7 @@ async def step_intro() -> None:
         padding=(1, 2),
     ))
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
     console.print(Panel(
         "[bold red]THE PROBLEM[/]\n\n"
@@ -134,7 +135,7 @@ async def step_intro() -> None:
         padding=(0, 2),
     ))
 
-    await asyncio.sleep(3)
+    await asyncio.sleep(1)
 
     console.print(Panel(
         "[bold green]THE SOLUTION: JARVIS MULTI-AGENT ROUTER[/]\n\n"
@@ -153,7 +154,7 @@ async def step_intro() -> None:
         padding=(0, 2),
     ))
 
-    await asyncio.sleep(3)
+    await asyncio.sleep(1)
 
 
 async def step_architecture() -> None:
@@ -189,7 +190,7 @@ async def step_architecture() -> None:
         padding=(0, 2),
     ))
 
-    await asyncio.sleep(3)
+    await asyncio.sleep(1)
 
 
 async def step_system_check() -> None:
@@ -239,7 +240,7 @@ async def step_system_check() -> None:
     )
 
     console.print(table)
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
 
 async def step_run_commands() -> list[dict]:
@@ -376,7 +377,7 @@ async def step_summary(results: list[dict]) -> None:
 
     console.print(table)
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
     # Key metrics
     total_commands = len(results)
@@ -406,7 +407,7 @@ async def step_summary(results: list[dict]) -> None:
         padding=(0, 1),
     ))
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
     # Tech stack
     console.print(Panel(
@@ -440,10 +441,10 @@ async def step_summary(results: list[dict]) -> None:
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════════════════
 
-async def run_demo() -> None:
+async def run_demo(clear_screen: bool = True) -> None:
     """Run the JARVIS demo with real command processing."""
     try:
-        await step_intro()
+        await step_intro(clear_screen=clear_screen)
         await step_architecture()
         await step_system_check()
         results = await step_run_commands()

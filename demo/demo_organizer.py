@@ -33,7 +33,7 @@ console = Console()
 # UTILITIES
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def narrate(text: str, pause: float = 1.5) -> None:
+def narrate(text: str, pause: float = 0.8) -> None:
     console.print(f"\n[bold white on blue]  {text}  [/]")
     time.sleep(pause)
 
@@ -135,9 +135,10 @@ def score_file(path: Path, size: int, is_dup: bool) -> tuple[int, list[str]]:
 # DEMO STEPS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-async def step_intro() -> None:
+async def step_intro(clear_screen: bool = True) -> None:
     """Intro: present the Organizer use case."""
-    console.clear()
+    if clear_screen:
+        console.clear()
 
     console.print(Panel(
         Align.center(Text.from_markup(
@@ -155,7 +156,7 @@ async def step_intro() -> None:
         padding=(1, 2),
     ))
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
     console.print(Panel(
         "[bold red]THE PROBLEM[/]\n\n"
@@ -170,7 +171,7 @@ async def step_intro() -> None:
         padding=(0, 2),
     ))
 
-    await asyncio.sleep(3)
+    await asyncio.sleep(0.5)
 
     console.print(Panel(
         "[bold green]THE SOLUTION: AI ORGANIZER AGENTS[/]\n\n"
@@ -186,7 +187,7 @@ async def step_intro() -> None:
         padding=(0, 2),
     ))
 
-    await asyncio.sleep(3)
+    await asyncio.sleep(0.5)
 
 
 async def step_architecture() -> None:
@@ -218,7 +219,7 @@ async def step_architecture() -> None:
         padding=(0, 2),
     ))
 
-    await asyncio.sleep(3)
+    await asyncio.sleep(0.5)
 
 
 async def step_scan_real_directory(target_dir: str) -> dict:
@@ -339,7 +340,7 @@ async def step_scan_real_directory(target_dir: str) -> dict:
         for path, pattern in sensitive_files[:5]:
             console.print(f"  [red]![/] {Path(path).name} — pattern: [yellow]{pattern}[/]")
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
     return {
         "results": results,
@@ -420,7 +421,7 @@ async def step_dedup(scan_data: dict) -> dict:
         border_style="green",
     ))
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
     return {
         "dup_groups": len(dup_groups),
@@ -495,7 +496,7 @@ async def step_backup(target_dir: str, scan_data: dict) -> str:
 
     console.print(f"\n  [dim]Backups stored in: {backup_dir}[/]")
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
     return run_id
 
 
@@ -526,7 +527,7 @@ async def step_summary(scan_data: dict, dedup_data: dict, target_dir: str, run_i
         padding=(0, 1),
     ))
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(0.5)
 
     console.print(Panel(
         "[bold white]Organizer Technology Stack[/]\n\n"
@@ -542,7 +543,7 @@ async def step_summary(scan_data: dict, dedup_data: dict, target_dir: str, run_i
         padding=(0, 2),
     ))
 
-    await asyncio.sleep(1)
+    await asyncio.sleep(0.5)
 
     console.print()
     console.print(Align.center(Text.from_markup(
@@ -557,7 +558,7 @@ async def step_summary(scan_data: dict, dedup_data: dict, target_dir: str, run_i
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════════════════
 
-async def run_demo(target_dir: str = "") -> None:
+async def run_demo(target_dir: str = "", clear_screen: bool = True) -> None:
     """Run the Organizer demo with real file scanning."""
     if not target_dir:
         target_dir = "F:\\BUREAU\\disk_cleaner"
@@ -567,7 +568,7 @@ async def run_demo(target_dir: str = "") -> None:
         target_dir = str(Path(__file__).parent.parent)
 
     try:
-        await step_intro()
+        await step_intro(clear_screen=clear_screen)
         await step_architecture()
         scan_data = await step_scan_real_directory(target_dir)
 
