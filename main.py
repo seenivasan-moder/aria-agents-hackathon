@@ -10,6 +10,8 @@ Usage:
     python main.py meta [prompt]    # Meta-Exchange: multi-AI orchestration
     python main.py organize [dir]   # Organizer: file scan + dedup
     python main.py jarvis [cmd]     # JARVIS: personal AI assistant
+    python main.py demo-org [dir]   # Demo: Organizer (real file scan)
+    python main.py demo-jarvis      # Demo: JARVIS (multi-agent routing)
 """
 
 from __future__ import annotations
@@ -61,6 +63,11 @@ def main():
         asyncio.run(_demo())
     elif mode == "hitl":
         _hitl()
+    elif mode == "demo-org":
+        target = sys.argv[2] if len(sys.argv) > 2 else ""
+        asyncio.run(_demo_org(target))
+    elif mode == "demo-jarvis":
+        asyncio.run(_demo_jarvis())
     elif mode == "meta":
         prompt = " ".join(sys.argv[2:]) if len(sys.argv) > 2 else ""
         asyncio.run(_meta(prompt))
@@ -74,7 +81,7 @@ def main():
         asyncio.run(_pipeline())
     else:
         console.print(f"[red]Unknown mode:[/] {mode}")
-        console.print("Available: pipeline, scan, status, demo, hitl, meta, organize, jarvis")
+        console.print("Available: pipeline, scan, status, demo, demo-org, demo-jarvis, hitl, meta, organize, jarvis")
         sys.exit(1)
 
 
@@ -101,6 +108,16 @@ async def _demo():
 def _hitl():
     from src.services.hitl_webhook import start_server
     start_server()
+
+
+async def _demo_org(target_dir: str = ""):
+    from demo.demo_organizer import run_demo
+    await run_demo(target_dir)
+
+
+async def _demo_jarvis():
+    from demo.demo_jarvis import run_demo
+    await run_demo()
 
 
 async def _meta(prompt: str = ""):

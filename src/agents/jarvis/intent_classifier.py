@@ -127,7 +127,21 @@ def classify(text: str) -> ParsedIntent:
     entities = _extract_entities(text)
 
     # Check each domain by keyword matching
-    # Priority: system > trading > web > pipeline > analysis > voice > conversation
+    # Priority: pipeline > voice > system > web > trading > analysis > conversation
+
+    # Pipeline (highest priority — must check before system to avoid "lance" capturing "pipeline")
+    if any(kw in lower for kw in PIPELINE_KEYWORDS):
+        return ParsedIntent(
+            domain=IntentDomain.PIPELINE, action=IntentAction.EXECUTE, confidence=90,
+            entities=entities, raw_input=text, suggested_agent="orchestrator",
+        )
+
+    # Voice control (high priority for responsiveness)
+    if any(kw in lower for kw in VOICE_KEYWORDS):
+        return ParsedIntent(
+            domain=IntentDomain.VOICE, action=IntentAction.EXECUTE, confidence=95,
+            entities=entities, raw_input=text, suggested_agent="voice",
+        )
 
     # System commands
     for keyword, action in SYSTEM_KEYWORDS.items():
@@ -137,16 +151,7 @@ def classify(text: str) -> ParsedIntent:
                 entities=entities, raw_input=text, suggested_agent="ia-system",
             )
 
-    # Trading
-    if any(kw in lower for kw in TRADING_KEYWORDS):
-        action = IntentAction.SCAN if "scan" in lower else IntentAction.ANALYZE
-        return ParsedIntent(
-            domain=IntentDomain.TRADING, action=action, confidence=85,
-            entities=entities, raw_input=text, requires_ai=True,
-            suggested_agent="ia-trading",
-        )
-
-    # Web
+    # Web (check before trading to prioritize explicit web keywords)
     if any(kw in lower for kw in WEB_KEYWORDS) or entities.get("url"):
         action = IntentAction.SEARCH if "cherche" in lower or "search" in lower else IntentAction.NAVIGATE
         return ParsedIntent(
@@ -154,11 +159,13 @@ def classify(text: str) -> ParsedIntent:
             entities=entities, raw_input=text, suggested_agent="ia-system",
         )
 
-    # Pipeline
-    if any(kw in lower for kw in PIPELINE_KEYWORDS):
+    # Trading (use word boundary matching to avoid "eth" in "ethereum")
+    if any(kw in words for kw in TRADING_KEYWORDS):
+        action = IntentAction.SCAN if "scan" in lower else IntentAction.ANALYZE
         return ParsedIntent(
-            domain=IntentDomain.PIPELINE, action=IntentAction.EXECUTE, confidence=90,
-            entities=entities, raw_input=text, suggested_agent="orchestrator",
+            domain=IntentDomain.TRADING, action=action, confidence=85,
+            entities=entities, raw_input=text, requires_ai=True,
+            suggested_agent="ia-trading",
         )
 
     # Analysis (needs AI)
@@ -168,13 +175,6 @@ def classify(text: str) -> ParsedIntent:
             domain=IntentDomain.ANALYSIS, action=action, confidence=80,
             entities=entities, raw_input=text, requires_ai=True,
             suggested_agent="ia-deep",
-        )
-
-    # Voice control
-    if any(kw in lower for kw in VOICE_KEYWORDS):
-        return ParsedIntent(
-            domain=IntentDomain.VOICE, action=IntentAction.EXECUTE, confidence=95,
-            entities=entities, raw_input=text, suggested_agent="voice",
         )
 
     # Default: conversation (needs AI)
