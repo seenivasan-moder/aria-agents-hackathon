@@ -1,8 +1,8 @@
 """Airia SDK Bridge — pipeline execution with embedded system prompts.
 
-Runs each agent through Airia when configured, with automatic fallback to local.
-The 4 system prompts are embedded here so Airia pipelines produce structured JSON
-that our Python agents can parse directly.
+Uses execute_temporary_assistant() when no pipeline IDs are configured,
+injecting our system prompts directly. Falls back to execute_pipeline()
+if pipeline IDs are set in .env.
 """
 
 from __future__ import annotations
@@ -126,7 +126,13 @@ AGENT_PROMPTS = {
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class AiriaBridge:
-    """Wrapper around the Airia SDK with embedded pipeline prompts."""
+    """Wrapper around the Airia SDK with embedded pipeline prompts.
+
+    Supports two modes:
+    - Pipeline mode: uses pre-configured pipeline IDs (if set in .env)
+    - Temporary assistant mode: uses execute_temporary_assistant() with
+      embedded system prompts (no pipeline setup needed)
+    """
 
     def __init__(self):
         self._client = None
@@ -160,7 +166,48 @@ class AiriaBridge:
             self._get_client()
         return self._available or False
 
-    # ── Generic pipeline execution ────────────────────────────────────────
+    # ── Core execution ─────────────────────────────────────────────────────
+
+    def _execute_temporary(
+        self,
+        agent_name: str,
+        user_input: dict | str,
+    ) -> dict[str, Any]:
+        """Execute via temporary assistant with embedded system prompt."""
+        client = self._get_client()
+        if not client:
+            return {"ok": False, "error": "Airia not available", "mode": "local-only"}
+
+        prompt = AGENT_PROMPTS.get(agent_name, "")
+        if not prompt:
+            return {"ok": False, "error": f"No prompt for agent {agent_name}"}
+
+        input_str = json.dumps(user_input) if isinstance(user_input, dict) else user_input
+
+        try:
+            t0 = time.monotonic()
+            result = client.pipeline_execution.execute_temporary_assistant(
+                model_parameters={"temperature": 0.3, "maxTokens": 4096},
+                user_input=input_str,
+                prompt_parameters={"prompt": prompt},
+                assistant_name=f"sentinel-{agent_name}",
+                save_history=False,
+            )
+            latency = (time.monotonic() - t0) * 1000
+            raw = result.result if hasattr(result, "result") else str(result)
+            parsed = _try_parse_json(raw)
+
+            console.print(f"  [dim]Airia {agent_name} (temp): {int(latency)}ms, {len(raw)} chars[/]")
+            return {
+                "ok": True,
+                "result": raw,
+                "parsed": parsed,
+                "latency_ms": round(latency),
+                "source": "airia-temp",
+            }
+        except Exception as e:
+            console.print(f"  [yellow]Airia {agent_name} failed: {e}[/]")
+            return {"ok": False, "error": str(e), "source": "airia"}
 
     def execute_pipeline(
         self,
@@ -168,7 +215,7 @@ class AiriaBridge:
         user_input: dict | str,
         agent_name: str = "",
     ) -> dict[str, Any]:
-        """Execute an Airia pipeline. Returns parsed result or error."""
+        """Execute an Airia pipeline by ID. Returns parsed result or error."""
         client = self._get_client()
         if not client:
             return {"ok": False, "error": "Airia not available", "mode": "local-only"}
@@ -185,8 +232,6 @@ class AiriaBridge:
             )
             latency = (time.monotonic() - t0) * 1000
             raw = result.result if hasattr(result, "result") else str(result)
-
-            # Try to parse JSON from Airia response
             parsed = _try_parse_json(raw)
 
             console.print(f"  [dim]Airia {agent_name}: {int(latency)}ms[/]")
@@ -195,34 +240,45 @@ class AiriaBridge:
                 "result": raw,
                 "parsed": parsed,
                 "latency_ms": round(latency),
-                "source": "airia",
+                "source": "airia-pipeline",
             }
         except Exception as e:
             console.print(f"  [yellow]Airia {agent_name} failed: {e}[/]")
             return {"ok": False, "error": str(e), "source": "airia"}
 
+    def _execute_agent(
+        self,
+        agent_name: str,
+        pipeline_id: str,
+        user_input: dict | str,
+    ) -> dict[str, Any]:
+        """Smart execution: pipeline ID if available, else temporary assistant."""
+        if pipeline_id:
+            return self.execute_pipeline(pipeline_id, user_input, agent_name)
+        return self._execute_temporary(agent_name, user_input)
+
     # ── Per-agent pipeline methods ────────────────────────────────────────
 
     def execute_market_pipeline(self, market_data: list[dict]) -> dict[str, Any]:
         """Run Agent 1 through Airia with market data as input."""
-        return self.execute_pipeline(
+        return self._execute_agent(
+            "market_intelligence",
             config.market_pipeline_id,
             {
                 "market_data": market_data[:15],
                 "instruction": "Analyze these market signals and return risk assessment.",
             },
-            agent_name="market_intelligence",
         )
 
     def execute_corporate_pipeline(self, exposure_data: dict) -> dict[str, Any]:
         """Run Agent 2 through Airia with corporate exposure data."""
-        return self.execute_pipeline(
+        return self._execute_agent(
+            "corporate_context",
             config.corporate_pipeline_id,
             {
                 "corporate_data": exposure_data,
                 "instruction": "Analyze corporate exposure and identify risk zones.",
             },
-            agent_name="corporate_context",
         )
 
     def execute_consensus_pipeline(
@@ -231,31 +287,31 @@ class AiriaBridge:
         corporate_exposure: dict,
     ) -> dict[str, Any]:
         """Run Agent 3 through Airia with combined data."""
-        return self.execute_pipeline(
+        return self._execute_agent(
+            "consensus_strategy",
             config.consensus_pipeline_id,
             {
                 "market_signals": market_signals[:10],
                 "corporate_exposure": corporate_exposure,
                 "instruction": "Generate 3 hedging strategies based on market and corporate data.",
             },
-            agent_name="consensus_strategy",
         )
 
     def execute_compliance_pipeline(self, report_data: dict) -> dict[str, Any]:
         """Run Agent 4 through Airia for executive summary generation."""
-        return self.execute_pipeline(
+        return self._execute_agent(
+            "compliance_docs",
             config.compliance_pipeline_id,
             {
                 "report_data": report_data,
                 "instruction": "Generate a formal executive summary for this treasury risk report.",
             },
-            agent_name="compliance_docs",
         )
 
     # ── Utility ───────────────────────────────────────────────────────────
 
     def get_system_prompt(self, agent_name: str) -> str:
-        """Get the system prompt for a given agent (for Airia UI configuration)."""
+        """Get the system prompt for a given agent."""
         return AGENT_PROMPTS.get(agent_name, "")
 
     def list_prompts(self) -> dict[str, str]:
