@@ -36,19 +36,14 @@ async def run_full_pipeline() -> SentinelReport:
     # Initialize database
     db.init_db()
 
-    # Phase 1: Agents 1 + 2 in parallel
+    # Phase 1: Agents 1 + 2 in parallel (each agent handles Airia internally)
     console.print("\n[bold]Phase 1:[/] Market Intelligence + Corporate Context (parallel)")
     signals, exposure = await asyncio.gather(
         market_intelligence.run(run_id),
         corporate_context.run(run_id),
     )
 
-    # Notify Airia pipelines (non-blocking, best-effort)
-    if bridge.is_available:
-        bridge.execute_market_pipeline(config.watched_pairs)
-        bridge.execute_corporate_pipeline(config.company_id)
-
-    # Phase 2: Agent 3 — Consensus
+    # Phase 2: Agent 3 — Consensus (3-way: M1 + OL1 + Airia)
     console.print("\n[bold]Phase 2:[/] Consensus & Strategy")
     consensus_result = await consensus_strategy.run(run_id, signals, exposure)
 

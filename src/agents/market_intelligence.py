@@ -1,10 +1,11 @@
 """Agent 1 — Market Intelligence: scans markets for risk signals.
 
-Adapted from JARVIS mexc_scanner.py + multi-asset extension (Forex, Commodities).
+Hybrid mode: local CCXT scan + optional Airia pipeline enrichment.
 """
 
 from __future__ import annotations
 
+import json
 import time
 from typing import Any
 
@@ -14,6 +15,7 @@ from rich.table import Table
 from src.config import config
 from src.models import MarketSignal, Direction, Regime
 from src.services.market_data import fetch_all_market_data
+from src.airia_bridge import bridge
 from src import database as db
 
 console = Console()
@@ -44,6 +46,34 @@ def _build_signal(raw: dict) -> MarketSignal:
     )
 
 
+def _enrich_with_airia(signals: list[MarketSignal]) -> list[MarketSignal]:
+    """Optionally enrich signals with Airia pipeline analysis."""
+    if not bridge.is_available:
+        return signals
+
+    market_data = [s.model_dump(mode="json") for s in signals[:15]]
+    result = bridge.execute_market_pipeline(market_data)
+
+    if not result.get("ok") or not result.get("parsed"):
+        return signals
+
+    parsed = result["parsed"]
+    airia_signals = parsed.get("signals", []) if isinstance(parsed, dict) else []
+    if not airia_signals:
+        return signals
+
+    # Merge Airia risk scores with local signals (average)
+    airia_map = {s.get("asset", ""): s for s in airia_signals}
+    for signal in signals:
+        airia = airia_map.get(signal.symbol)
+        if airia and isinstance(airia.get("risk_score"), (int, float)):
+            # Weighted average: 60% local, 40% Airia
+            signal.risk_score = round(signal.risk_score * 0.6 + airia["risk_score"] * 0.4, 1)
+
+    console.print(f"  [dim]Airia enrichment: {len(airia_signals)} signals merged[/]")
+    return signals
+
+
 async def run(run_id: str) -> list[MarketSignal]:
     """Execute Agent 1: scan all markets and return risk signals."""
     t0 = time.monotonic()
@@ -52,10 +82,14 @@ async def run(run_id: str) -> list[MarketSignal]:
     raw_data = await fetch_all_market_data()
     signals = [_build_signal(r) for r in raw_data if r.get("symbol") != "ERROR"]
 
+    # Enrich with Airia (best-effort)
+    signals = _enrich_with_airia(signals)
+
     # Sort by risk score descending
     signals.sort(key=lambda s: s.risk_score, reverse=True)
 
     latency = (time.monotonic() - t0) * 1000
+    model_used = "CCXT+local" + ("+airia" if bridge.is_available else "")
 
     # Save to DB
     db.save_signals(run_id, [s.model_dump(mode="json") for s in signals])
@@ -63,13 +97,12 @@ async def run(run_id: str) -> list[MarketSignal]:
         run_id, "market_scan", "market_intelligence",
         input_summary=f"{len(config.watched_pairs)} pairs watched",
         output_summary=f"{len(signals)} signals, top risk: {signals[0].symbol if signals else 'none'} ({signals[0].risk_score if signals else 0})",
+        model_used=model_used,
         latency_ms=latency,
     )
 
-    # Display
     _print_signals(signals)
-
-    console.print(f"[green]Agent 1 done[/] — {len(signals)} signals in {int(latency)}ms")
+    console.print(f"[green]Agent 1 done[/] — {len(signals)} signals in {int(latency)}ms [{model_used}]")
     return signals
 
 

@@ -17,7 +17,7 @@ from reportlab.platypus import (
 from src.models import SentinelReport
 
 
-def generate_report_pdf(report: SentinelReport, output_path: str) -> str:
+def generate_report_pdf(report: SentinelReport, output_path: str, airia_summary: str = "") -> str:
     """Generate a professional PDF report from SentinelReport data."""
     doc = SimpleDocTemplate(
         output_path, pagesize=A4,
@@ -78,6 +78,21 @@ def generate_report_pdf(report: SentinelReport, output_path: str) -> str:
         )
 
     elements.append(Paragraph(summary_text, styles["Normal"]))
+
+    # Airia-generated executive summary (when available)
+    if airia_summary:
+        elements.append(Spacer(1, 4 * mm))
+        elements.append(Paragraph("<i>AI-Generated Executive Brief (via Airia Pipeline):</i>", styles["SubInfo"]))
+        elements.append(Spacer(1, 2 * mm))
+        # Split by sections if present
+        for line in airia_summary.split("\n"):
+            line = line.strip()
+            if line:
+                if line.startswith("[") and line.endswith("]"):
+                    elements.append(Paragraph(f"<b>{line}</b>", styles["Normal"]))
+                else:
+                    elements.append(Paragraph(line, styles["Normal"]))
+
     elements.append(Spacer(1, 5 * mm))
 
     # ── Market Analysis ──

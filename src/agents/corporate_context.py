@@ -1,6 +1,6 @@
 """Agent 2 — Corporate Context: analyzes internal financial exposure.
 
-Uses simulated corporate data (mock_corporate.json) for the demo.
+Hybrid mode: local calculation + optional Airia pipeline enrichment.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ from rich.table import Table
 
 from src.config import config
 from src.models import CorporateExposure, CurrencyPosition
+from src.airia_bridge import bridge
 from src import database as db
 
 console = Console()
@@ -76,6 +77,40 @@ def _calculate_exposure(data: dict) -> CorporateExposure:
     )
 
 
+def _enrich_with_airia(exposure: CorporateExposure) -> CorporateExposure:
+    """Optionally enrich exposure with Airia pipeline analysis."""
+    if not bridge.is_available:
+        return exposure
+
+    exposure_data = exposure.model_dump(mode="json")
+    result = bridge.execute_corporate_pipeline(exposure_data)
+
+    if not result.get("ok") or not result.get("parsed"):
+        return exposure
+
+    parsed = result["parsed"]
+    if not isinstance(parsed, dict):
+        return exposure
+
+    # Merge Airia risk zones into concentration_risks
+    airia_risks = parsed.get("risk_zones", [])
+    if airia_risks:
+        existing = set(exposure.concentration_risks)
+        for risk in airia_risks:
+            if risk not in existing:
+                exposure.concentration_risks.append(f"[Airia] {risk}")
+
+    # Update liquidity status in risk score
+    liquidity = parsed.get("liquidity_status", "")
+    if liquidity == "Critical":
+        exposure.risk_score = min(100, exposure.risk_score + 20)
+    elif liquidity == "Warning":
+        exposure.risk_score = min(100, exposure.risk_score + 10)
+
+    console.print(f"  [dim]Airia enrichment: {len(airia_risks)} risk zones, liquidity={liquidity}[/]")
+    return exposure
+
+
 async def run(run_id: str) -> CorporateExposure:
     """Execute Agent 2: analyze corporate financial context."""
     t0 = time.monotonic()
@@ -84,7 +119,11 @@ async def run(run_id: str) -> CorporateExposure:
     data = _load_mock_data()
     exposure = _calculate_exposure(data)
 
+    # Enrich with Airia (best-effort)
+    exposure = _enrich_with_airia(exposure)
+
     latency = (time.monotonic() - t0) * 1000
+    model_used = "local" + ("+airia" if bridge.is_available else "")
 
     # Save to DB
     db.save_exposure(run_id, exposure.model_dump(mode="json"))
@@ -92,13 +131,12 @@ async def run(run_id: str) -> CorporateExposure:
         run_id, "corporate_analysis", "corporate_context",
         input_summary=f"Company: {exposure.company_id}",
         output_summary=f"{len(exposure.positions)} currencies, {len(exposure.concentration_risks)} risks, score={exposure.risk_score}",
+        model_used=model_used,
         latency_ms=latency,
     )
 
-    # Display
     _print_exposure(exposure)
-
-    console.print(f"[green]Agent 2 done[/] — risk score: {exposure.risk_score} in {int(latency)}ms")
+    console.print(f"[green]Agent 2 done[/] — risk score: {exposure.risk_score} in {int(latency)}ms [{model_used}]")
     return exposure
 
 

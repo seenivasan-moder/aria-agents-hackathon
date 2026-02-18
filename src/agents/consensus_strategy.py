@@ -1,6 +1,6 @@
 """Agent 3 — Consensus & Strategy: multi-IA consensus on hedging strategies.
 
-Adapted from JARVIS consensus() pattern — queries M1 + OL1 + Airia in parallel.
+Hybrid mode: LM Studio cluster + Ollama + Airia pipeline — 3-way consensus.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ from src.models import (
     HedgingStrategy, RiskLevel,
 )
 from src.services.lm_cluster import consensus as cluster_consensus
+from src.airia_bridge import bridge
 from src import database as db
 
 console = Console()
@@ -67,14 +68,12 @@ def _build_exposure_summary(exposure: CorporateExposure) -> str:
 
 def _parse_strategies(response_text: str) -> list[HedgingStrategy]:
     """Parse LLM response into HedgingStrategy objects."""
-    # Try to extract JSON from response
     text = response_text.strip()
 
-    # Find JSON block
     start = text.find("{")
     end = text.rfind("}") + 1
     if start < 0 or end <= start:
-        return _fallback_strategies()
+        return []
 
     try:
         data = json.loads(text[start:end])
@@ -85,27 +84,25 @@ def _parse_strategies(response_text: str) -> list[HedgingStrategy]:
                 name=s.get("name", "Unknown"),
                 description=s.get("description", ""),
                 instruments=s.get("instruments", []),
-                cost_estimate_pct=s.get("cost_estimate_pct", 0),
-                risk_reduction_pct=s.get("risk_reduction_pct", 0),
-                confidence=s.get("confidence", 50),
+                cost_estimate_pct=float(s.get("cost_estimate_pct", 0)),
+                risk_reduction_pct=float(s.get("risk_reduction_pct", 0)),
+                confidence=float(s.get("confidence", 50)),
                 rationale=s.get("rationale", ""),
                 risk_level=risk_map.get(s.get("name", "").lower(), RiskLevel.MEDIUM),
             ))
-        return strategies if strategies else _fallback_strategies()
-    except (json.JSONDecodeError, KeyError):
-        return _fallback_strategies()
+        return strategies
+    except (json.JSONDecodeError, KeyError, ValueError):
+        return []
 
 
 def _fallback_strategies() -> list[HedgingStrategy]:
-    """Return default strategies if LLM parsing fails."""
+    """Return default strategies if all IA sources fail."""
     return [
         HedgingStrategy(
             name="Conservative",
             description="Full hedge on all major currency exposures using forwards. Commodity futures for 6-month coverage.",
             instruments=["FX Forward", "Commodity Futures"],
-            cost_estimate_pct=0.45,
-            risk_reduction_pct=85,
-            confidence=80,
+            cost_estimate_pct=0.45, risk_reduction_pct=85, confidence=80,
             rationale="Maximum protection against currency and commodity volatility.",
             risk_level=RiskLevel.LOW,
         ),
@@ -113,9 +110,7 @@ def _fallback_strategies() -> list[HedgingStrategy]:
             name="Moderate",
             description="Selective hedging on top 3 exposures with options for flexibility. Partial commodity coverage.",
             instruments=["FX Option", "FX Forward", "Commodity Futures"],
-            cost_estimate_pct=0.25,
-            risk_reduction_pct=60,
-            confidence=72,
+            cost_estimate_pct=0.25, risk_reduction_pct=60, confidence=72,
             rationale="Balanced approach protecting major risks while maintaining upside potential.",
             risk_level=RiskLevel.MEDIUM,
         ),
@@ -123,9 +118,7 @@ def _fallback_strategies() -> list[HedgingStrategy]:
             name="Aggressive",
             description="Minimal hedging — only JPY and CNY forwards for largest exposures. No commodity hedge.",
             instruments=["FX Forward"],
-            cost_estimate_pct=0.10,
-            risk_reduction_pct=30,
-            confidence=55,
+            cost_estimate_pct=0.10, risk_reduction_pct=30, confidence=55,
             rationale="Low cost, accepts significant market risk for potential gains.",
             risk_level=RiskLevel.HIGH,
         ),
@@ -137,7 +130,7 @@ async def run(
     signals: list[MarketSignal],
     exposure: CorporateExposure,
 ) -> ConsensusResult:
-    """Execute Agent 3: generate consensus hedging strategies."""
+    """Execute Agent 3: 3-way consensus (LM Studio + Ollama + Airia)."""
     t0 = time.monotonic()
     console.print("[bold cyan]Agent 3 — Consensus & Strategy[/] generating...")
 
@@ -151,32 +144,59 @@ async def run(
         risks=risks,
     )
 
-    # Query multiple nodes in parallel (consensus pattern)
-    consensus_result = await cluster_consensus(prompt, nodes=["M1", "OL1"])
-
-    # Parse all responses and pick best strategies
+    # === 3-way consensus: Local cluster + Airia ===
     all_strategies: list[list[HedgingStrategy]] = []
-    models_used = consensus_result.get("models_used", [])
+    models_used: list[str] = []
 
-    for resp in consensus_result.get("responses", []):
+    # Source 1+2: LM Studio (M1) + Ollama (OL1) in parallel
+    cluster_result = await cluster_consensus(prompt, nodes=["M1", "OL1"])
+    for resp in cluster_result.get("responses", []):
         if resp.get("ok"):
-            strategies = _parse_strategies(resp["content"])
-            all_strategies.append(strategies)
+            parsed = _parse_strategies(resp["content"])
+            if parsed:
+                all_strategies.append(parsed)
+                models_used.append(resp.get("model", resp.get("node", "local")))
 
-    # Merge: use first successful parse, or fallback
+    # Source 3: Airia pipeline (best-effort)
+    if bridge.is_available:
+        airia_result = bridge.execute_consensus_pipeline(
+            [s.model_dump(mode="json") for s in signals[:10]],
+            exposure.model_dump(mode="json"),
+        )
+        if airia_result.get("ok") and airia_result.get("parsed"):
+            parsed_data = airia_result["parsed"]
+            if isinstance(parsed_data, dict):
+                airia_strats = _parse_strategies(json.dumps(parsed_data))
+                if airia_strats:
+                    all_strategies.append(airia_strats)
+                    models_used.append("airia-pipeline")
+
+    # === Merge consensus ===
     if all_strategies:
+        # Use first complete set as base
         strategies = all_strategies[0]
-        # Average confidence across multiple responses
+
+        # Average confidence scores across all sources
         if len(all_strategies) > 1:
             for i, s in enumerate(strategies):
-                confs = [all_strategies[j][i].confidence for j in range(len(all_strategies)) if i < len(all_strategies[j])]
+                confs = []
+                for source in all_strategies:
+                    if i < len(source):
+                        confs.append(source[i].confidence)
                 if confs:
                     s.confidence = round(sum(confs) / len(confs), 1)
+
+            # Check for dissenting views (>20% confidence spread)
+            dissenting = []
+            for i, s in enumerate(strategies):
+                confs = [src[i].confidence for src in all_strategies if i < len(src)]
+                if confs and max(confs) - min(confs) > 20:
+                    dissenting.append(f"{s.name}: confidence spread {min(confs):.0f}-{max(confs):.0f}")
     else:
         strategies = _fallback_strategies()
         models_used = ["fallback"]
 
-    # Build consensus result
+    # Build result
     recommended = max(range(len(strategies)), key=lambda i: strategies[i].confidence) if strategies else 0
     consensus_score = round(sum(s.confidence for s in strategies) / len(strategies), 1) if strategies else 0
 
@@ -184,6 +204,7 @@ async def run(
         strategies=strategies,
         recommended_index=recommended,
         consensus_score=consensus_score,
+        dissenting_views=dissenting if all_strategies and len(all_strategies) > 1 else [],
         models_used=models_used,
     )
 
@@ -198,15 +219,15 @@ async def run(
     db.save_audit(
         run_id, "consensus_strategy", "consensus_strategy",
         input_summary=f"{len(signals)} signals + {exposure.company_id} exposure",
-        output_summary=f"{len(strategies)} strategies, recommended: {strategies[recommended].name}, consensus={consensus_score}",
+        output_summary=f"{len(strategies)} strategies, recommended: {strategies[recommended].name}, "
+                       f"consensus={consensus_score}, sources={len(all_strategies)}",
         model_used=", ".join(models_used),
         latency_ms=latency,
     )
 
-    # Display
     _print_strategies(result)
-
-    console.print(f"[green]Agent 3 done[/] — consensus score: {consensus_score} in {int(latency)}ms")
+    console.print(f"[green]Agent 3 done[/] — consensus score: {consensus_score} "
+                  f"({len(all_strategies)} sources) in {int(latency)}ms")
     return result
 
 
@@ -234,5 +255,11 @@ def _print_strategies(result: ConsensusResult) -> None:
         )
 
     console.print(table)
+
+    if result.dissenting_views:
+        console.print("\n[yellow]Dissenting views:[/]")
+        for d in result.dissenting_views:
+            console.print(f"  [yellow]![/] {d}")
+
     console.print(f"\nModels used: {', '.join(result.models_used)}")
     console.print(f"Consensus score: {result.consensus_score:.1f}")
