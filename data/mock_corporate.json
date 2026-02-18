@@ -1,0 +1,119 @@
+{
+  "company_id": "ACME-CORP",
+  "company_name": "ACME International Trading Corp",
+  "base_currency": "EUR",
+  "fiscal_year_end": "2026-12-31",
+  "treasury": {
+    "total_assets": 125000000,
+    "total_liabilities": 48000000,
+    "cash_equivalents": 32000000
+  },
+  "currency_positions": [
+    {
+      "currency": "USD",
+      "cash_balance": 12500000,
+      "receivables": 8200000,
+      "payables": 4100000,
+      "hedged_amount": 3000000,
+      "notes": "Main trading currency — US supplier payments + client revenues"
+    },
+    {
+      "currency": "GBP",
+      "cash_balance": 4800000,
+      "receivables": 3100000,
+      "payables": 6200000,
+      "hedged_amount": 2000000,
+      "notes": "UK subsidiary operations — net payer in GBP"
+    },
+    {
+      "currency": "JPY",
+      "cash_balance": 280000000,
+      "receivables": 150000000,
+      "payables": 420000000,
+      "hedged_amount": 100000000,
+      "notes": "Japanese component sourcing — significant exposure"
+    },
+    {
+      "currency": "CHF",
+      "cash_balance": 2100000,
+      "receivables": 800000,
+      "payables": 1500000,
+      "hedged_amount": 0,
+      "notes": "Swiss partnerships — small exposure"
+    },
+    {
+      "currency": "CNY",
+      "cash_balance": 15000000,
+      "receivables": 22000000,
+      "payables": 45000000,
+      "hedged_amount": 10000000,
+      "notes": "China manufacturing — largest net payable position"
+    }
+  ],
+  "upcoming_commitments": [
+    {
+      "id": "COM-001",
+      "description": "Q2 raw material purchase — Japan",
+      "currency": "JPY",
+      "amount": 350000000,
+      "due_date": "2026-04-15",
+      "status": "confirmed"
+    },
+    {
+      "id": "COM-002",
+      "description": "UK office lease renewal",
+      "currency": "GBP",
+      "amount": 1200000,
+      "due_date": "2026-05-01",
+      "status": "confirmed"
+    },
+    {
+      "id": "COM-003",
+      "description": "China factory equipment upgrade",
+      "currency": "CNY",
+      "amount": 28000000,
+      "due_date": "2026-06-30",
+      "status": "planned"
+    },
+    {
+      "id": "COM-004",
+      "description": "US client contract — expected revenue",
+      "currency": "USD",
+      "amount": 5500000,
+      "due_date": "2026-03-31",
+      "status": "confirmed"
+    }
+  ],
+  "commodity_exposures": [
+    {
+      "commodity": "Crude Oil (WTI)",
+      "monthly_consumption_usd": 850000,
+      "hedged_months": 3,
+      "notes": "Transportation + manufacturing energy costs"
+    },
+    {
+      "commodity": "Natural Gas",
+      "monthly_consumption_usd": 320000,
+      "hedged_months": 6,
+      "notes": "European facility heating + industrial use"
+    },
+    {
+      "commodity": "Copper",
+      "monthly_consumption_usd": 450000,
+      "hedged_months": 0,
+      "notes": "Electronic component manufacturing — UNHEDGED"
+    }
+  ],
+  "risk_policies": {
+    "max_single_currency_exposure_pct": 25,
+    "min_hedge_ratio_pct": 50,
+    "var_limit_daily_eur": 500000,
+    "approved_instruments": [
+      "FX Forward",
+      "FX Option",
+      "Commodity Futures",
+      "Interest Rate Swap"
+    ],
+    "requires_board_approval_above_eur": 5000000
+  }
+}

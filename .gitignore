@@ -1,0 +1,24 @@
+# Environment
+.env
+api.txt
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# Data (generated at runtime)
+data/sentinel.db
+data/sentinel.db-wal
+data/sentinel.db-shm
+data/reports/*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
