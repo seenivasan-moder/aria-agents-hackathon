@@ -12,6 +12,7 @@ Usage:
     python main.py jarvis [cmd]     # JARVIS: personal AI assistant
     python main.py demo-org [dir]   # Demo: Organizer (real file scan)
     python main.py demo-jarvis      # Demo: JARVIS (multi-agent routing)
+    python main.py demo-matrix      # Demo: Matrix pipeline orchestration
 """
 
 from __future__ import annotations
@@ -68,6 +69,8 @@ def main():
         asyncio.run(_demo_org(target))
     elif mode == "demo-jarvis":
         asyncio.run(_demo_jarvis())
+    elif mode == "demo-matrix":
+        asyncio.run(_demo_matrix())
     elif mode == "meta":
         prompt = " ".join(sys.argv[2:]) if len(sys.argv) > 2 else ""
         asyncio.run(_meta(prompt))
@@ -81,7 +84,7 @@ def main():
         asyncio.run(_pipeline())
     else:
         console.print(f"[red]Unknown mode:[/] {mode}")
-        console.print("Available: pipeline, scan, status, demo, demo-org, demo-jarvis, hitl, meta, organize, jarvis")
+        console.print("Available: pipeline, scan, status, demo, demo-org, demo-jarvis, demo-matrix, hitl, meta, organize, jarvis")
         sys.exit(1)
 
 
@@ -117,6 +120,11 @@ async def _demo_org(target_dir: str = ""):
 
 async def _demo_jarvis():
     from demo.demo_jarvis import run_demo
+    await run_demo()
+
+
+async def _demo_matrix():
+    from demo.demo_matrix import run_demo
     await run_demo()
 
 
