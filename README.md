@@ -15,7 +15,7 @@
 
 An **Operating System for AI Agents** — orchestrating the collaboration between humans, local LLMs, and cloud AI to automate critical enterprise processes with **full traceability** and **human-in-the-loop control**.
 
-**4 agent groups** | **12+ specialized agents** | **5-GPU local cluster (43GB VRAM)** | **Airia pipelines** | **3-way multi-model consensus** | **HITL approval** | **SQLite audit trail**
+**5 agent groups** | **16+ specialized agents** | **5-GPU local cluster (43GB VRAM)** | **Airia pipelines** | **3-way multi-model consensus** | **Pipeline Engine (Domino/Vectorial/Matrix)** | **HITL approval** | **SQLite audit trail**
 
 <br/>
 
@@ -33,7 +33,7 @@ Airia Sentinel is not just a treasury tool — it's an **Agentic OS**: a domain-
 Parallel Data Collection  →  Multi-Model Consensus  →  Structured Output  →  Human Approval
 ```
 
-The platform currently ships with **4 agent groups**, each solving a different real-world problem:
+The platform currently ships with **5 agent groups**, each solving a different real-world problem:
 
 | Group | Domain | Agents | Status |
 |-------|--------|--------|--------|
@@ -41,6 +41,7 @@ The platform currently ships with **4 agent groups**, each solving a different r
 | **Meta-Exchange** | Multi-AI Provider Orchestration | 3 agents | Production |
 | **Organizer** | Intelligent File Management | 2 agents | Production |
 | **JARVIS** | Personal AI Assistant | 2 agents | Production |
+| **Matrix** | Advanced Pipeline Orchestration | 4 agents | Production |
 
 ---
 
@@ -51,6 +52,7 @@ The platform currently ships with **4 agent groups**, each solving a different r
 - **Airia SDK v0.1.41**: 4 pipelines, 4 deployments, 3 custom tools, dual execution mode (pipeline + temporary assistant)
 - **Local AI Cluster**: 5 GPUs, 43GB VRAM, qwen3-30b permanent, qwen3:1.7b for fast inference
 - **3-Way Consensus**: LM Studio + Ollama + Airia pipeline — weighted confidence averaging with dissent detection
+- **Pipeline Engine**: 3 composable orchestration patterns (Domino, Vectorial, Matrix) with validation gates
 - **Evaluation**: 30/30 test cases passed on Airia platform, Sentinel-3 at 71.66% precision
 - **Modern Stack**: Python 3.13, async/await, Pydantic v2, httpx connection pooling, FastAPI
 
@@ -219,6 +221,40 @@ Multi-agent personal assistant with intent classification and intelligent sub-ag
 "Analyse ce code" → Intent-Classifier (analysis/analyze) → Execution-Engine → ia-deep (qwen3-30b)
 ```
 
+### Group 5: Matrix — Advanced Pipeline Orchestration (4 agents)
+
+The **Pipeline Engine** provides 3 composable orchestration patterns that can be combined for complex multi-agent workflows:
+
+| Pattern | Description | Use Case |
+|---------|-------------|----------|
+| **Domino** | Sequential chain (A→B→C→D) with validation gates | Step-by-step pipelines with quality checks |
+| **Vectorial** | Parallel execution with weighted aggregation | Multi-model consensus, fan-out/fan-in |
+| **Matrix** | Agent×Context scoring grid with top-K execution | Optimal routing based on task complexity |
+
+**4 specialized agents** power the engine:
+
+| Agent | File | Role |
+|-------|------|------|
+| **Validator** | `src/agents/matrix/validator.py` | Quality gate between pipeline stages — validates data integrity, schema conformance, business rules |
+| **Aggregator** | `src/agents/matrix/aggregator.py` | Fuses parallel results — weighted average, majority vote, best confidence, union strategies |
+| **Optimizer** | `src/agents/matrix/optimizer.py` | Real-time routing optimization — node profiling, latency/cost/reliability scoring |
+| **Enricher** | `src/agents/matrix/enricher.py` | Data enrichment — AI-generated summaries, metadata tagging, cross-referencing |
+
+```
+Pattern 1: DOMINO                Pattern 2: VECTORIAL           Pattern 3: MATRIX
+┌─────┐  ┌─────┐  ┌─────┐      ┌─────┐                        Agent × Context
+│  A  │→│  B  │→│  C  │      │  A  │──┐                      ┌────┬────┬────┐
+└─────┘  └─────┘  └─────┘      └─────┘  │  ┌──────────┐       │    │cplx│simp│
+  ↓ validate  ↓ validate       ┌─────┐  ├→│Aggregator│       ├────┼────┼────┤
+  ✓           ✓                │  B  │──┤  └──────────┘       │M1  │ 95 │ 40 │
+                               └─────┘  │                     │OL1 │ 50 │ 90 │
+                               ┌─────┐  │                     │Airia│ 80 │ 60 │
+                               │  C  │──┘                     └────┴────┴────┘
+                               └─────┘                         → Top-K execution
+```
+
+> The engine is implemented in `src/pipeline_engine.py` with `StepResult`, `PipelineResult`, `DominoPipeline`, `VectorialPipeline`, `MatrixPipeline`, and `CompositePipeline` classes.
+
 > See [docs/USE_CASES.md](docs/USE_CASES.md) for detailed architecture and agent descriptions for each group.
 
 ---
@@ -318,12 +354,16 @@ uv run python main.py scan
 uv run python main.py status
 ```
 
-### Demo Mode
+### Demo Modes
 
-Cinematic walkthrough with narration panels, step-by-step agent execution, and HITL simulation. Designed for a 3-4 minute screen recording.
+4 cinematic demos for hackathon presentations:
 
 ```bash
-uv run python main.py demo
+uv run python main.py demo            # Sentinel: Treasury risk pipeline (7 steps)
+uv run python main.py demo-org        # Organizer: Real file scan + dedup + backup
+uv run python main.py demo-jarvis     # JARVIS: Multi-agent intent routing (7 commands)
+uv run python main.py demo-matrix     # Matrix: Pipeline Engine (3 patterns + composite)
+uv run python main.py demo-all        # ALL DEMOS: Run all 4 in sequence
 ```
 
 ### HITL Webhook Server
@@ -334,9 +374,11 @@ uv run python main.py hitl
 
 ---
 
-## Demo Mode
+## Demo Modes
 
-The built-in demo mode provides a **cinematic 7-step walkthrough** designed for hackathon video recording:
+### Demo 1: Sentinel (Treasury Risk)
+
+Cinematic 7-step walkthrough of the flagship pipeline. Designed for a 3-4 minute screen recording.
 
 | Step | Scene | Duration |
 |------|-------|----------|
@@ -350,6 +392,30 @@ The built-in demo mode provides a **cinematic 7-step walkthrough** designed for 
 
 ```bash
 uv run python main.py demo
+```
+
+### Demo 2: Organizer (File Intelligence)
+
+Real-world file scanning with MD5 hashing, category classification, duplicate detection, sensitive data scanning, and SQLite backup.
+
+```bash
+uv run python main.py demo-org [target_dir]
+```
+
+### Demo 3: JARVIS (Multi-Agent Routing)
+
+Processes 7 commands across 6 domains, demonstrating intent classification (<1ms) and intelligent sub-agent routing with timeout protection and fallback chains.
+
+```bash
+uv run python main.py demo-jarvis
+```
+
+### Demo 4: Matrix (Pipeline Engine)
+
+Showcases all 3 orchestration patterns (Domino, Vectorial, Matrix) plus a Composite pipeline combining them all.
+
+```bash
+uv run python main.py demo-matrix
 ```
 
 ---
@@ -420,7 +486,7 @@ All tables indexed by `run_id` for fast pipeline queries.
 
 ```
 aria-agents-hackathon-private/
-├── main.py                              # CLI entry point (5 modes)
+├── main.py                              # CLI entry point (12 modes)
 ├── pyproject.toml                       # Dependencies
 ├── setup_airia_pipelines.py             # One-time Airia pipeline provisioning
 ├── .env.example                         # Template
@@ -429,8 +495,9 @@ aria-agents-hackathon-private/
 │   ├── config.py                        # Centralized config (Airia, cluster, markets)
 │   ├── models.py                        # Pydantic models (9 models, strict validation)
 │   ├── database.py                      # SQLite audit trail (5 tables, WAL mode)
-│   ├── orchestrator.py                  # Main pipeline orchestration (3 phases)
+│   ├── orchestrator.py                  # Main pipeline orchestration (6 functions)
 │   ├── airia_bridge.py                  # Airia SDK wrapper (dual mode + 4 FR prompts)
+│   ├── pipeline_engine.py              # Pipeline Engine: Domino + Vectorial + Matrix
 │   │
 │   ├── agents/
 │   │   │── # Sentinel Group (Treasury Risk)
@@ -451,9 +518,16 @@ aria-agents-hackathon-private/
 │   │   │   └── dedup_agent.py           # Agent: Deduplication + space recovery
 │   │   │
 │   │   │── # JARVIS Group (Personal Assistant)
-│   │   └── jarvis/
-│   │       ├── intent_classifier.py     # Agent: Intent detection + entity extraction
-│   │       └── execution_engine.py      # Agent: Sub-agent routing + fallback chains
+│   │   ├── jarvis/
+│   │   │   ├── intent_classifier.py     # Agent: Intent detection + entity extraction
+│   │   │   └── execution_engine.py      # Agent: Sub-agent routing + fallback chains
+│   │   │
+│   │   │── # Matrix Group (Pipeline Orchestration)
+│   │   └── matrix/
+│   │       ├── validator.py             # Agent: Quality gates + validation rules
+│   │       ├── aggregator.py            # Agent: Result fusion (4 strategies)
+│   │       ├── optimizer.py             # Agent: Routing optimization + node profiling
+│   │       └── enricher.py              # Agent: AI summaries + metadata enrichment
 │   │
 │   ├── services/
 │   │   ├── market_data.py               # CCXT + simulated Forex/Commodities
@@ -466,7 +540,10 @@ aria-agents-hackathon-private/
 │       └── retry.py                     # Retry with exponential backoff
 │
 ├── demo/
-│   └── demo_scenario.py                 # Cinematic demo script (7 steps)
+│   ├── demo_scenario.py                 # Demo: Sentinel pipeline (7 steps)
+│   ├── demo_organizer.py               # Demo: File scan + dedup + backup
+│   ├── demo_jarvis.py                  # Demo: Multi-agent routing (7 commands)
+│   └── demo_matrix.py                  # Demo: Pipeline Engine (3 patterns)
 │
 ├── data/
 │   ├── mock_corporate.json              # Simulated ACME Corp treasury data
@@ -474,7 +551,7 @@ aria-agents-hackathon-private/
 │   └── reports/                         # Generated PDF reports
 │
 ├── docs/
-│   ├── USE_CASES.md                     # 4 agent groups with architectures
+│   ├── USE_CASES.md                     # 5 agent groups with architectures
 │   ├── ARCHITECTURE.md                  # Technical deep dive (Mermaid diagrams)
 │   └── EVALUATION.md                    # Airia evaluation results & analysis
 │
@@ -488,10 +565,10 @@ aria-agents-hackathon-private/
 
 | Criteria | Our Response |
 |----------|-------------|
-| **Technical Implementation** | Airia SDK (4 pipelines + deployments) + Local AI Cluster (5 GPU, 43GB VRAM) + 12+ agents across 4 groups + CCXT live data + 3-way Multi-IA Consensus + FastAPI HITL + SQLite audit trail |
-| **UX/UI Design** | Rich CLI dashboard + Professional PDF Reports (Big Four style) + HITL REST API + Cinematic demo mode + French prompts |
-| **Potential Impact** | Domain-agnostic Agentic OS: Treasury ($1T+ market), AI governance (cost control), file management, personal AI. Reduces decision latency from days to minutes. |
-| **Creativity/Uniqueness** | Only solution combining local LLM cluster (5 GPU) + cloud Airia platform + multi-model consensus + 4 distinct agent groups showing platform versatility. Not just one use case — a complete agent operating system. |
+| **Technical Implementation** | Airia SDK (4 pipelines + deployments) + Local AI Cluster (5 GPU, 43GB VRAM) + 16+ agents across 5 groups + Pipeline Engine (3 composable patterns) + CCXT live data + 3-way Multi-IA Consensus + FastAPI HITL + SQLite audit trail |
+| **UX/UI Design** | Rich CLI dashboard + Professional PDF Reports (Big Four style) + HITL REST API + 4 cinematic demo modes + French prompts |
+| **Potential Impact** | Domain-agnostic Agentic OS: Treasury ($1T+ market), AI governance (cost control), file management, personal AI, pipeline orchestration. Reduces decision latency from days to minutes. |
+| **Creativity/Uniqueness** | Only solution combining local LLM cluster (5 GPU) + cloud Airia platform + multi-model consensus + **Pipeline Engine with 3 composable patterns (Domino/Vectorial/Matrix)** + 5 distinct agent groups showing platform versatility. Not just one use case — a complete agent operating system. |
 
 ---
 
@@ -517,7 +594,7 @@ MIT
 
 **Built with [Airia](https://airia.ai)** &bull; Agentic OS — Multi-Agent Intelligence Platform
 
-*4 Agent Groups &bull; 12+ Specialized Agents &bull; 5-GPU Cluster &bull; 3-Way Consensus &bull; Full Audit Trail*
+*5 Agent Groups &bull; 16+ Specialized Agents &bull; 5-GPU Cluster &bull; Pipeline Engine (Domino/Vectorial/Matrix) &bull; 3-Way Consensus &bull; Full Audit Trail*
 
 *Hackathon submission by [Franck Delmas](https://github.com/Turbo31150)*
 

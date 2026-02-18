@@ -430,4 +430,129 @@ flowchart TD
 
 ---
 
+## Pipeline Engine — Composable Orchestration Patterns
+
+The Pipeline Engine (`src/pipeline_engine.py`) provides 3 composable patterns:
+
+```mermaid
+graph TB
+    subgraph "Pattern 1: Domino"
+        D1["Step A"] --> DV1["Validator"]
+        DV1 -->|pass| D2["Step B"]
+        DV1 -->|fail| DSTOP["HALT"]
+        D2 --> DV2["Validator"]
+        DV2 -->|pass| D3["Step C"]
+    end
+
+    subgraph "Pattern 2: Vectorial"
+        VA["Agent M1"] --> AGG["Aggregator"]
+        VB["Agent OL1"] --> AGG
+        VC["Agent Airia"] --> AGG
+        AGG --> ENR["Enricher"]
+    end
+
+    subgraph "Pattern 3: Matrix"
+        GRID["Score Grid<br/>Agent × Context"] --> TOP["Top-K Selection"]
+        TOP --> EX1["Execute Best"]
+        TOP --> EX2["Execute 2nd"]
+        TOP --> EX3["Execute 3rd"]
+    end
+
+    subgraph "Composite"
+        CP1["Vectorial"] --> CPV["Validator"]
+        CPV --> CP2["Domino"]
+        CP2 --> CP3["Matrix"]
+    end
+```
+
+### Pipeline Engine Classes
+
+```mermaid
+classDiagram
+    class StepResult {
+        +str step_name
+        +StepStatus status
+        +Any data
+        +float confidence
+        +str agent_used
+        +str model_used
+        +float latency_ms
+        +str error
+    }
+
+    class PipelineResult {
+        +str pipeline_name
+        +str pattern
+        +list~StepResult~ steps
+        +float total_latency_ms
+        +float success_rate
+        +Any final_data
+    }
+
+    class DominoPipeline {
+        +str name
+        +list~DominoStep~ steps
+        +run(run_id) PipelineResult
+    }
+
+    class VectorialPipeline {
+        +str name
+        +list~VectorAgent~ agents
+        +str aggregation
+        +run(run_id, input_data) PipelineResult
+    }
+
+    class MatrixPipeline {
+        +str name
+        +list~MatrixCell~ cells
+        +int top_k
+        +run(run_id) PipelineResult
+    }
+
+    class CompositePipeline {
+        +str name
+        +list~Pipeline~ stages
+        +run(run_id) PipelineResult
+    }
+
+    DominoPipeline --> StepResult
+    VectorialPipeline --> StepResult
+    MatrixPipeline --> StepResult
+    CompositePipeline --> PipelineResult
+```
+
+### Matrix Agents
+
+```mermaid
+graph LR
+    subgraph "Matrix Agent Group"
+        VAL["Validator<br/>5 rule types<br/>error/warning severity"]
+        AGG2["Aggregator<br/>4 fusion strategies<br/>dissent detection"]
+        OPT["Optimizer<br/>Node profiling<br/>Efficiency scoring"]
+        ENR2["Enricher<br/>AI summaries<br/>Metadata tags"]
+    end
+
+    subgraph "Integration Points"
+        PE["Pipeline Engine"]
+        DB2["SQLite Audit"]
+        LM["LM Studio M1"]
+        OL["Ollama OL1"]
+        AI["Airia Platform"]
+    end
+
+    PE --> VAL
+    PE --> AGG2
+    PE --> OPT
+    PE --> ENR2
+    VAL --> DB2
+    AGG2 --> DB2
+    OPT --> DB2
+    ENR2 --> LM
+    ENR2 --> OL
+    ENR2 --> AI
+    ENR2 --> DB2
+```
+
+---
+
 *See the main [README.md](../README.md) for quick start instructions and [USE_CASES.md](USE_CASES.md) for domain-specific applications.*

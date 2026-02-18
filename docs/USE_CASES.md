@@ -337,9 +337,94 @@ Personal AI assistants are typically single-model, single-purpose tools. Users n
 
 ---
 
+## 5. Matrix — Advanced Pipeline Orchestration Engine
+
+> **Status**: Fully implemented with 3 composable patterns + 4 agents
+
+### Problem
+Traditional agent pipelines are rigid — either sequential or parallel. Complex real-world workflows need **composable orchestration patterns** that can be combined: sequential chains with validation gates, parallel fan-out with aggregation, and intelligent routing based on task-agent affinity.
+
+### Pipeline Engine — 3 Composable Patterns
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    MATRIX PIPELINE ENGINE                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Pattern 1: DOMINO (Sequential)                                  │
+│  ┌─────┐  ┌──────────┐  ┌─────┐  ┌──────────┐  ┌─────┐        │
+│  │Step │→│Validator │→│Step │→│Validator │→│Step │        │
+│  │  A  │  │  Gate 1  │  │  B  │  │  Gate 2  │  │  C  │        │
+│  └─────┘  └──────────┘  └─────┘  └──────────┘  └─────┘        │
+│  Chain with quality gates — stops on failure                     │
+│                                                                  │
+│  Pattern 2: VECTORIAL (Parallel)                                 │
+│  ┌─────┐                                                        │
+│  │M1   │──┐                                                     │
+│  └─────┘  │  ┌──────────────┐  ┌───────────┐                    │
+│  ┌─────┐  ├→│  Aggregator  │→│  Enricher │                    │
+│  │OL1  │──┤  │ (4 strategies)│  │ (summary) │                    │
+│  └─────┘  │  └──────────────┘  └───────────┘                    │
+│  ┌─────┐  │  weighted_avg | majority_vote                       │
+│  │Airia│──┘  best_confidence | union                            │
+│  └─────┘                                                        │
+│                                                                  │
+│  Pattern 3: MATRIX (Scoring Grid)                                │
+│  ┌──────────────────────────────┐                                │
+│  │     │complex│simple│trading  │                                │
+│  ├─────┼───────┼──────┼────────┤                                │
+│  │ M1  │  95   │  40  │   85   │ → Select Top-K                 │
+│  │ OL1 │  50   │  90  │   30   │   cells and                    │
+│  │Airia│  80   │  60  │   70   │   execute them                 │
+│  │local│  20   │  95  │   10   │                                │
+│  └─────┴───────┴──────┴────────┘                                │
+│  Agent × Context affinity scoring — optimal routing              │
+│                                                                  │
+│  COMPOSITE: Chain all 3 patterns together                        │
+│  Vectorial → Validator → Domino → Matrix                        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Agent Architecture
+
+| Agent | File | Role |
+|-------|------|------|
+| **Validator** | `src/agents/matrix/validator.py` | Quality gate between pipeline stages. 5 check types: `not_empty`, `has_key`, `min_length`, `score_above`, `type_check`. Configurable severity (error blocks, warning continues). |
+| **Aggregator** | `src/agents/matrix/aggregator.py` | Fuses parallel results using 4 strategies: `weighted_avg`, `majority_vote`, `best_confidence`, `union`. Includes dissent detection (spread > 20%). |
+| **Optimizer** | `src/agents/matrix/optimizer.py` | Profiles node performance (latency, success rate, cost, capacity). Efficiency score = latency(30%) + cost(30%) + reliability(40%). Recommends optimal routing. |
+| **Enricher** | `src/agents/matrix/enricher.py` | Adds value between pipeline stages. AI-generated summaries (M1→OL1→Airia fallback) + metadata tagging (type, size, timestamp). |
+
+### Key Classes (pipeline_engine.py)
+
+| Class | Description |
+|-------|-------------|
+| `StepResult` | Outcome of a single step (status, data, confidence, latency) |
+| `PipelineResult` | Outcome of a full pipeline (steps, timing, success rate) |
+| `DominoPipeline` | Sequential execution with validation gates |
+| `VectorialPipeline` | Parallel execution with weighted aggregation |
+| `MatrixPipeline` | Agent×Context scoring grid with top-K execution |
+| `CompositePipeline` | Composes multiple patterns into a single workflow |
+
+### Demo Results
+
+| Pipeline | Success | Latency | Notes |
+|----------|---------|---------|-------|
+| Domino | 100% | ~2s | Sequential with validator gates |
+| Vectorial | 50-75% | ~5s | Parallel M1+OL1+Airia (cloud may timeout) |
+| Matrix | 100% | ~6ms | Agent×Context scoring, optimal routing |
+| Composite | 50-100% | ~10s | All 3 patterns composed |
+
+### Business Value
+- **Composable**: Mix and match patterns for any workflow
+- **Self-optimizing**: Optimizer profiles nodes and adjusts routing
+- **Quality-assured**: Validator gates prevent garbage propagation
+- **Cost-aware**: Prefers free local models, uses cloud as fallback
+
+---
+
 ## Cross-Cutting Architecture Pattern
 
-All 4 use cases share the same **Airia Sentinel pattern**:
+All 5 use cases share the same **Airia Sentinel pattern**:
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
@@ -351,6 +436,8 @@ All 4 use cases share the same **Airia Sentinel pattern**:
   2+ agents            3+ models            PDF + DB            FastAPI
   in parallel          in parallel          + Airia             webhook
 ```
+
+The Matrix Pipeline Engine adds a **meta-orchestration layer** above this pattern, allowing patterns to be **composed** (Domino + Vectorial + Matrix) for arbitrary complexity.
 
 This pattern is **reusable**, **testable** (via Airia evaluations), and **auditable** (via SQLite + HITL). It can be deployed across any domain where:
 1. Multiple data sources need simultaneous scanning
