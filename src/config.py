@@ -66,7 +66,7 @@ class SentinelConfig:
 
     # Timeouts (seconds)
     connect_timeout: float = 5.0
-    inference_timeout: float = 60.0
+    inference_timeout: float = 90.0
     health_timeout: float = 3.0
 
     # Inference params

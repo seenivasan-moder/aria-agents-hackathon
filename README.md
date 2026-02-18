@@ -1,77 +1,152 @@
-# Airia Sentinel
+<div align="center">
 
-**Multi-Agent Treasury Orchestration & Risk Management**
+# AIRIA SENTINEL
 
-> Airia AI Agents Challenge - Track 2: Active Agents
+### Agentic OS — Multi-Agent Intelligence Platform
+
+**Airia AI Agents Challenge — Track 2: Active Agents**
+
+[![Python 3.13](https://img.shields.io/badge/Python-3.13-blue?logo=python&logoColor=white)](https://python.org)
+[![Airia SDK](https://img.shields.io/badge/Airia_SDK-0.1.41-purple?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+PHBhdGggZD0iTTEyIDJMMiAyMmgyMEwxMiAyeiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=)](https://platform.airia.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Evaluations](https://img.shields.io/badge/Airia_Eval-30%2F30_passed-brightgreen)](https://airia.ai/evaluations)
+
+<br/>
+
+An **Operating System for AI Agents** — orchestrating the collaboration between humans, local LLMs, and cloud AI to automate critical enterprise processes with **full traceability** and **human-in-the-loop control**.
+
+**4 agent groups** | **12+ specialized agents** | **5-GPU local cluster (43GB VRAM)** | **Airia pipelines** | **3-way multi-model consensus** | **HITL approval** | **SQLite audit trail**
+
+<br/>
+
+[Quick Start](#-quick-start) &bull; [Architecture](#-architecture) &bull; [Agent Groups](#-agent-groups) &bull; [Demo](#-demo-mode) &bull; [Evaluation](#-airia-evaluation-results) &bull; [For Judges](#-for-judges--compliance)
+
+</div>
 
 ---
 
-## Problem
+## Vision
 
-Enterprise treasury teams face a constant challenge: monitoring global markets (Forex, Crypto, Commodities), assessing internal financial exposure, and making timely hedging decisions. Today, this process is fragmented across multiple tools, slow, and prone to human error. A single missed currency spike can cost millions.
+Airia Sentinel is not just a treasury tool — it's an **Agentic OS**: a domain-agnostic platform where **groups of specialized AI agents** collaborate to solve complex problems. Each agent group follows the same proven pattern:
 
-## Solution
+```
+Parallel Data Collection  →  Multi-Model Consensus  →  Structured Output  →  Human Approval
+```
 
-Airia Sentinel is a **multi-agent AI system** that orchestrates the entire treasury risk management workflow in real-time:
+The platform currently ships with **4 agent groups**, each solving a different real-world problem:
 
-1. **Market Intelligence Agent** — scans crypto, forex, and commodity markets for risk signals
-2. **Corporate Context Agent** — analyzes internal financial exposure and concentration risks
-3. **Consensus & Strategy Agent** — generates hedging strategies using multi-IA consensus (3 AI models in parallel)
-4. **Compliance & Docs Agent** — produces a professional PDF report with full audit trail + HITL approval
+| Group | Domain | Agents | Status |
+|-------|--------|--------|--------|
+| **Sentinel** | Treasury Risk Management | 4 agents | Production |
+| **Meta-Exchange** | Multi-AI Provider Orchestration | 3 agents | Production |
+| **Organizer** | Intelligent File Management | 2 agents | Production |
+| **JARVIS** | Personal AI Assistant | 2 agents | Production |
 
-All orchestrated through **Airia pipelines** with **Human-in-the-Loop (HITL)** approval via webhook.
+---
+
+## For Judges & Compliance
+
+### For Technical Reviewers
+
+- **Airia SDK v0.1.41**: 4 pipelines, 4 deployments, 3 custom tools, dual execution mode (pipeline + temporary assistant)
+- **Local AI Cluster**: 5 GPUs, 43GB VRAM, qwen3-30b permanent, qwen3:1.7b for fast inference
+- **3-Way Consensus**: LM Studio + Ollama + Airia pipeline — weighted confidence averaging with dissent detection
+- **Evaluation**: 30/30 test cases passed on Airia platform, Sentinel-3 at 71.66% precision
+- **Modern Stack**: Python 3.13, async/await, Pydantic v2, httpx connection pooling, FastAPI
+
+### For Business & Legal Reviewers
+
+- **Immutable Audit Trail**: Every AI decision is logged in SQLite with timestamp, model used, input/output summary, and latency. No decision can be taken without a trace.
+- **Human-in-the-Loop (HITL)**: No strategy is executed without explicit human approval via FastAPI webhook. Supports approve, reject, and escalate workflows.
+- **Accountability**: Each agent logs which AI model produced which output. Cross-model consensus ensures no single model can introduce bias unchecked.
+- **Regulatory Readiness**: PDF reports are generated in Big Four style with executive summary, market analysis, exposure breakdown, and audit certification — ready for board review.
+- **Data Privacy**: Hybrid architecture processes sensitive data locally first (5-GPU cluster), only sending anonymized summaries to cloud AI for enrichment.
+
+### For End Users
+
+- **One Command**: `uv run python main.py` runs the entire pipeline
+- **Professional PDF Reports**: A4 reports with tables, charts, and Airia-generated executive summaries
+- **Natural Language**: All agent prompts are in French, outputs are structured and readable
+- **Real-Time Data**: Live crypto prices from MEXC, simulated forex/commodities for demo
+- **Cinematic Demo**: Built-in 7-step demo mode for presentations
+
+---
+
+## The Problem
+
+Enterprise teams face fragmented workflows: treasury managers juggle multiple tools for market monitoring, developers switch between AI providers without cost control, IT teams manage terabytes of unclassified files. **Every disconnected process is a risk**.
+
+> *"In Q1 2026, ACME Corp's JPY exposure of 350M went unhedged for 72 hours during a BOJ policy shift, resulting in a $2.3M unrealized loss."*
+
+## The Solution
+
+Airia Sentinel provides **specialized agent groups** for each domain, all orchestrated through Airia pipelines with the same proven architecture:
+
+### Sentinel Group — Treasury Risk
+
+
+
+| Phase | Agent | Role | Intelligence Source |
+|:-----:|-------|------|-------------------|
+| 1 | **Market Intelligence** | Scans crypto, forex, and commodity markets for risk signals | CCXT (MEXC) + Airia Pipeline |
+| 1 | **Corporate Context** | Analyzes internal financial exposure and concentration risks | Local calc + Airia Pipeline |
+| 2 | **Consensus & Strategy** | Generates hedging strategies via 3-way multi-IA consensus | LM Studio + Ollama + Airia |
+| 3 | **Compliance & Docs** | Produces professional PDF report + audit trail + HITL approval | ReportLab + Airia Pipeline |
+
+> Phase 1 runs in **parallel**. Phases 2 and 3 run **sequentially**. All steps produce a full **audit trail** in SQLite.
 
 ---
 
 ## Architecture
 
 ```
-                    +---------------------+
-                    |   AIRIA PLATFORM    |
-                    |   (4 Pipelines)     |
-                    +---------+-----------+
-                              |
-            +-----------------+------------------+
-            |                 |                  |
-    +-------v-------+ +------v------+ +---------v-------+
-    |  Agent 1      | |  Agent 2    | |  Agent 3        |
-    |  Market       | |  Corporate  | |  Consensus      |
-    |  Intelligence | |  Context    | |  & Strategy     |
-    |  [CCXT+Airia] | |  [Local+AI] | |  [M1+OL1+Airia] |
-    +-------+-------+ +------+------+ +---------+-------+
-            |                |                   |
-            | Phase 1        | Phase 1           | Phase 2
-            | (Parallel)     | (Parallel)        | (Sequential)
-            +----------------+-------------------+
-                             |
-                    +--------v--------+
-                    |   Agent 4       |
-                    |   Compliance    | Phase 3
-                    |   & Docs        |
-                    |   [PDF+Audit]   |
-                    +--------+--------+
-                             |
-                    +--------v--------+
-                    |   HITL          |
-                    |   Webhook       |
-                    |   (FastAPI)     |
-                    +-----------------+
+                         ┌─────────────────────────┐
+                         │     AIRIA PLATFORM       │
+                         │  4 Pipelines + 3 Tools   │
+                         │  + Evaluation Suite       │
+                         └────────────┬──────────────┘
+                                      │
+              ┌───────────────────────┼───────────────────────┐
+              │                       │                       │
+   ┌──────────▼──────────┐  ┌────────▼────────┐  ┌──────────▼──────────┐
+   │   Agent 1            │  │   Agent 2        │  │   Agent 3            │
+   │   Market             │  │   Corporate      │  │   Consensus          │
+   │   Intelligence       │  │   Context        │  │   & Strategy         │
+   │                      │  │                  │  │                      │
+   │   CCXT + Airia       │  │   Local + Airia  │  │   M1 + OL1 + Airia   │
+   │   10 pairs live      │  │   5 currencies   │  │   3-way voting        │
+   └──────────┬───────────┘  └────────┬─────────┘  └──────────┬───────────┘
+              │ Phase 1 (parallel)    │                       │ Phase 2
+              └───────────────────────┼───────────────────────┘
+                                      │
+                           ┌──────────▼──────────┐
+                           │   Agent 4            │
+                           │   Compliance & Docs  │    Phase 3
+                           │                      │
+                           │   PDF + Audit Trail  │
+                           │   + Airia Summary     │
+                           └──────────┬───────────┘
+                                      │
+                           ┌──────────▼──────────┐
+                           │   HITL Gateway       │
+                           │   FastAPI Webhook    │
+                           │                      │
+                           │   Approve / Reject   │
+                           │   / Escalate         │
+                           └──────────────────────┘
 ```
-
-### Pipeline Flow
-
-| Phase | Agents | Mode | Description |
-|-------|--------|------|-------------|
-| Phase 1 | Agent 1 + Agent 2 | **Parallel** | Market scan + Corporate analysis run simultaneously |
-| Phase 2 | Agent 3 | **Sequential** | 3-way consensus: LM Studio (qwen3-30b) + Ollama (qwen3:1.7b) + Airia pipeline |
-| Phase 3 | Agent 4 | **Sequential** | PDF report generation + Airia executive summary + HITL approval request |
 
 ### Hybrid Execution Model
 
-Each agent runs in **hybrid mode**: local computation first, then Airia pipeline enrichment. This ensures:
-- **Resilience**: works fully offline with local AI cluster
-- **Quality**: Airia pipeline adds cloud-powered analysis on top
-- **Speed**: local results appear fast, Airia enriches asynchronously
+Each agent operates in **hybrid mode** — local computation first, then Airia pipeline enrichment:
+
+| Layer | Purpose | Benefit |
+|-------|---------|---------|
+| **Local First** | LM Studio cluster (5 GPU, 43GB VRAM) + Ollama | Speed + offline resilience |
+| **Cloud Enrichment** | Airia pipelines with GPT-5.1 | Quality + formal analysis |
+| **Consensus Merge** | Weighted averaging of confidence scores | Reliability + dissent detection |
+
+This ensures the system works **fully offline** with the local AI cluster, while Airia adds **cloud-powered enrichment** when available.
 
 ---
 
@@ -79,17 +154,72 @@ Each agent runs in **hybrid mode**: local computation first, then Airia pipeline
 
 | Component | Technology | Details |
 |-----------|------------|---------|
-| AI Orchestration | Airia SDK v0.1.41 | 4 pipelines + 4 deployments + 3 tools |
-| Local AI (Deep) | LM Studio | qwen3-30b, 5 GPUs, 43GB VRAM |
-| Local AI (Light) | Ollama | qwen3:1.7b, fast inference |
-| Market Data | CCXT v4+ | MEXC exchange, multi-pair |
-| Data Models | Pydantic v2 | Strict validation, JSON serialization |
-| PDF Reports | ReportLab v4 | Professional A4 reports with tables |
-| HITL Webhook | FastAPI + Uvicorn | Approve/reject/escalate strategies |
-| Database | SQLite (WAL mode) | 5 tables, full audit trail |
-| CLI UI | Rich v14 | Tables, panels, progress bars |
-| Package Manager | uv v0.10 | Fast Python dependency management |
-| Language | Python 3.13 | Modern async/await patterns |
+| AI Orchestration | **Airia SDK v0.1.41** | 4 pipelines + 4 deployments + 3 tools |
+| Local AI (Deep) | **LM Studio** | qwen3-30b, 5 GPUs, 43GB VRAM |
+| Local AI (Light) | **Ollama** | qwen3:1.7b, fast inference |
+| Market Data | **CCXT v4+** | MEXC exchange, multi-pair real-time |
+| Data Models | **Pydantic v2** | Strict validation, JSON serialization |
+| PDF Reports | **ReportLab v4** | Professional A4 reports with tables |
+| HITL Webhook | **FastAPI + Uvicorn** | Approve / reject / escalate strategies |
+| Database | **SQLite (WAL mode)** | 5 tables, full audit trail |
+| CLI UI | **Rich v14** | Tables, panels, progress bars |
+| Package Manager | **uv v0.10** | Fast Python dependency management |
+| Language | **Python 3.13** | Modern async/await patterns |
+
+---
+
+## Agent Groups
+
+### Group 1: Sentinel — Treasury Risk (4 agents)
+
+The flagship use case. Scans markets, analyzes corporate exposure, generates hedging strategies via 3-way consensus, and produces audit-ready PDF reports.
+
+> See pipeline details in the [Architecture](#architecture) section above.
+
+### Group 2: Meta-Exchange — Multi-AI Orchestration (3 agents)
+
+When you use **multiple AI providers** simultaneously (LM Studio, Ollama, Claude, GPT), who manages the costs, quality, and routing?
+
+| Agent | File | Role |
+|-------|------|------|
+| **Meta-Router** | `src/agents/meta/meta_router.py` | Analyzes query complexity, estimates costs, routes to optimal provider (M1/M2/OL1/Cloud/Airia) |
+| **Context-Manager** | `src/agents/meta/context_manager.py` | Manages cross-provider memory, deduplicates queries, tracks token budgets per session |
+| **Quality-Auditor** | `src/agents/meta/quality_auditor.py` | Compares responses across providers, detects hallucinations, scores coherence/completeness |
+
+```
+User Query → Meta-Router (classify + route) → Provider (M1/OL1/Cloud)
+                                                      ↓
+                              Quality-Auditor (validate) ← Context-Manager (dedup + memory)
+```
+
+### Group 3: Organizer — Intelligent File Management (2 agents)
+
+AI-powered disk intelligence: scan, classify, detect sensitive files, and identify duplicates.
+
+| Agent | File | Role |
+|-------|------|------|
+| **Librarian** | `src/agents/organizer/librarian.py` | Scans directories, classifies files (code/doc/image/data/config), detects API keys and credentials |
+| **Deduplicator** | `src/agents/organizer/dedup_agent.py` | Finds duplicate files by content hash, recommends keep/delete, calculates recoverable space |
+
+```
+Target Dir → Librarian (scan + classify + sensitivity) → Deduplicator (hash + recover space)
+```
+
+### Group 4: JARVIS — Personal AI Assistant (2 agents)
+
+Multi-agent personal assistant with intent classification and intelligent sub-agent routing.
+
+| Agent | File | Role |
+|-------|------|------|
+| **Intent-Classifier** | `src/agents/jarvis/intent_classifier.py` | Parses voice/text input, detects domain (system/web/trading/analysis), extracts entities |
+| **Execution-Engine** | `src/agents/jarvis/execution_engine.py` | Routes intents to sub-agents (ia-deep/ia-fast/ia-system/ia-trading), handles timeouts and fallback chains |
+
+```
+"Ouvre Chrome" → Intent-Classifier (system/open, app=chrome) → Execution-Engine → ia-system
+"Analyse ce code" → Intent-Classifier (analysis/analyze) → Execution-Engine → ia-deep (qwen3-30b)
+```
+
+> See [docs/USE_CASES.md](docs/USE_CASES.md) for detailed architecture and agent descriptions for each group.
 
 ---
 
@@ -100,9 +230,9 @@ Each agent runs in **hybrid mode**: local computation first, then Airia pipeline
 - Python 3.13+
 - [uv](https://docs.astral.sh/uv/) package manager
 - Airia API key ([platform.airia.com](https://platform.airia.com))
-- (Optional) LM Studio with a loaded model
-- (Optional) Ollama with qwen3:1.7b
-- (Optional) MEXC API credentials for live market data
+- *(Optional)* LM Studio with a loaded model
+- *(Optional)* Ollama with qwen3:1.7b
+- *(Optional)* MEXC API credentials for live market data
 
 ### Installation
 
@@ -125,7 +255,7 @@ cp .env.example .env
 # Required
 AIRIA_API_KEY=your_airia_api_key_here
 
-# Optional: Pre-configured pipeline IDs (created by setup script)
+# Optional: Pre-configured pipeline IDs (auto-created by setup script)
 AIRIA_MARKET_PIPELINE_ID=
 AIRIA_CORPORATE_PIPELINE_ID=
 AIRIA_CONSENSUS_PIPELINE_ID=
@@ -178,15 +308,17 @@ uv run python main.py pipeline
 
 ### Market Scan Only
 
-Run only Agent 1 to scan markets without the full pipeline.
-
 ```bash
 uv run python main.py scan
 ```
 
-**Output:** Table of market signals with risk scores, directions, and regimes.
+### System Status
 
-### Demo Mode (Video Recording)
+```bash
+uv run python main.py status
+```
+
+### Demo Mode
 
 Cinematic walkthrough with narration panels, step-by-step agent execution, and HITL simulation. Designed for a 3-4 minute screen recording.
 
@@ -194,40 +326,63 @@ Cinematic walkthrough with narration panels, step-by-step agent execution, and H
 uv run python main.py demo
 ```
 
-**Includes:**
-1. Problem/solution introduction
-2. Scenario setup (JPY volatility spike)
-3. Architecture overview
-4. Infrastructure health check
-5. Full pipeline execution with narration
-6. HITL approval simulation
-7. Summary with key metrics
-
-### System Status
-
-Check cluster health, node status, and performance metrics.
-
-```bash
-uv run python main.py status
-```
-
 ### HITL Webhook Server
-
-Start the FastAPI server for human-in-the-loop approval.
 
 ```bash
 uv run python main.py hitl
 ```
 
-**Endpoints:**
+---
+
+## Demo Mode
+
+The built-in demo mode provides a **cinematic 7-step walkthrough** designed for hackathon video recording:
+
+| Step | Scene | Duration |
+|------|-------|----------|
+| 1 | Problem / Solution introduction | ~5s |
+| 2 | Scenario: JPY volatility spike at ACME Corp | ~3s |
+| 3 | Architecture overview (pipeline flow diagram) | ~3s |
+| 4 | Infrastructure health check (cluster + Airia status) | ~2s |
+| 5 | Full pipeline execution with narration (Phase 1-2-3) | ~60s |
+| 6 | HITL approval simulation (CFO approves strategy) | ~5s |
+| 7 | Summary with key metrics + tech stack | ~4s |
+
+```bash
+uv run python main.py demo
+```
+
+---
+
+## Airia Evaluation Results
+
+The project has been evaluated on the Airia platform with **30/30 test cases passing**:
+
+| Agent | Score | Latency | Tokens | Cost | Precision |
+|-------|-------|---------|--------|------|-----------|
+| **Sentinel-3: Consensus Strategy** | 1.00 | 9.00s | 978.8 | $0.007739 | **71.66%** |
+| **Sentinel-1: Market Intelligence** | 1.00 | 1.13s | 249.5 | $0.000612 | 2.00% |
+| **Sentinel-2: Corporate Context** | 1.00 | 1.12s | 217.8 | $0.000601 | 0.00% |
+
+- **Evaluation model**: mistral-small-latest
+- **Total cost**: $0.089520
+- **Execution**: 30/30 completed
+
+> See [EVALUATION.md](EVALUATION.md) for detailed analysis and interpretation of results.
+
+---
+
+## HITL API Reference
+
+The FastAPI webhook server enables **human-in-the-loop approval** for generated strategies:
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/` | Health check |
-| GET | `/pending` | List pending approvals |
-| POST | `/approve` | Approve a strategy |
-| POST | `/reject` | Reject and escalate |
-| GET | `/report/{run_id}` | Get full run report |
+| `GET` | `/` | Health check |
+| `GET` | `/pending` | List pending approvals |
+| `POST` | `/approve` | Approve a strategy |
+| `POST` | `/reject` | Reject and escalate |
+| `GET` | `/report/{run_id}` | Get full run report |
 
 **Approve a strategy:**
 ```bash
@@ -243,94 +398,11 @@ curl -X POST http://localhost:8900/reject \
   -d '{"run_id": "abc123", "strategy_name": "Aggressive", "rejected_by": "CFO", "reason": "Too risky for Q2"}'
 ```
 
-### Windows Launcher
-
-```bash
-# Double-click or run from terminal
-launchers\SENTINEL.bat
-```
-
----
-
-## Project Structure
-
-```
-aria-agents-hackathon-private/
-+-- main.py                          # CLI entry point (5 modes)
-+-- pyproject.toml                   # Dependencies (airia, ccxt, reportlab...)
-+-- setup_airia_pipelines.py         # One-time Airia pipeline provisioning
-+-- .env                             # API keys (gitignored)
-+-- .env.example                     # Template
-+-- src/
-|   +-- __init__.py
-|   +-- config.py                    # Centralized config (Airia, cluster, markets)
-|   +-- models.py                    # Pydantic models (Signal, Exposure, Strategy...)
-|   +-- database.py                  # SQLite audit trail (5 tables)
-|   +-- orchestrator.py              # Main pipeline orchestration (3 phases)
-|   +-- airia_bridge.py              # Airia SDK wrapper (pipeline + temporary mode)
-|   +-- agents/
-|   |   +-- __init__.py
-|   |   +-- market_intelligence.py   # Agent 1: CCXT scan + Airia enrichment
-|   |   +-- corporate_context.py     # Agent 2: Treasury analysis + Airia risks
-|   |   +-- consensus_strategy.py    # Agent 3: 3-way multi-IA consensus
-|   |   +-- compliance_docs.py       # Agent 4: PDF report + Airia summary
-|   +-- services/
-|   |   +-- market_data.py           # CCXT + simulated Forex/Commodities
-|   |   +-- lm_cluster.py            # LM Studio + Ollama interface
-|   |   +-- pdf_generator.py         # ReportLab PDF generation
-|   |   +-- hitl_webhook.py          # FastAPI HITL server
-|   +-- utils/
-|       +-- http_pool.py             # Async HTTP connection pool (httpx)
-|       +-- retry.py                 # Retry with exponential backoff
-+-- data/
-|   +-- mock_corporate.json          # Simulated ACME Corp treasury data
-|   +-- sentinel.db                  # SQLite database (auto-created)
-|   +-- reports/                     # Generated PDF reports
-+-- demo/
-|   +-- demo_scenario.py             # Cinematic demo script
-|   +-- screenshots/                 # Screen captures
-+-- launchers/
-    +-- SENTINEL.bat                 # Windows launcher
-```
-
----
-
-## Airia Integration
-
-### Dual Execution Modes
-
-1. **Pipeline Mode** (recommended): Uses pre-configured pipeline IDs from `.env`
-   - `execute_pipeline(pipeline_id, user_input)` via Airia SDK
-   - Full traceability on the Airia platform
-
-2. **Temporary Assistant Mode** (zero-setup): Uses embedded system prompts
-   - `execute_temporary_assistant()` via Airia SDK
-   - No pipeline creation needed — just an API key
-
-The bridge automatically selects the right mode based on available pipeline IDs.
-
-### Airia Infrastructure
-
-| Resource | Count | Description |
-|----------|-------|-------------|
-| Pipelines | 4 | One per agent (Market, Corporate, Consensus, Compliance) |
-| Deployments | 4 | Production deployments for each pipeline |
-| Custom Tools | 3 | HITL Webhook, Market Scanner, Report Generator |
-| Model | GPT-5.1 | Cloud model used for pipeline execution |
-
-### System Prompts
-
-Each agent has a carefully crafted system prompt in French, embedded in `airia_bridge.py`:
-- **Agent 1**: Analyze market data, return JSON with risk scores and regimes
-- **Agent 2**: Analyze treasury data, identify concentration risks, return JSON
-- **Agent 3**: Generate 3 hedging strategies (Conservative/Moderate/Aggressive) in JSON
-- **Agent 4**: Write formal executive summary in Big Four style
-
 ---
 
 ## Database Schema
 
-SQLite with WAL mode, 5 tables:
+SQLite with WAL mode, 5 tables — every pipeline step is fully traceable:
 
 | Table | Purpose | Key Fields |
 |-------|---------|------------|
@@ -344,19 +416,71 @@ All tables indexed by `run_id` for fast pipeline queries.
 
 ---
 
-## Key Features
+## Project Structure
 
-- **Multi-IA Consensus**: Queries 3 AI models in parallel (LM Studio + Ollama + Airia), averages confidence scores, detects dissenting views
-- **Real Market Data**: Live crypto prices via CCXT (MEXC), simulated Forex/Commodities for demo
-- **Risk Scoring**: Multi-factor scoring (volatility, momentum, regime classification)
-- **Concentration Detection**: Identifies over-exposed currencies and unhedged commodity positions
-- **3 Hedging Strategies**: Conservative, Moderate, Aggressive with cost/risk tradeoffs and rationale
-- **Professional PDF Reports**: Executive summary, market analysis, exposure breakdown, strategy comparison table, audit trail
-- **Airia Executive Summary**: Cloud-generated formal summary injected into PDF (Big Four style)
-- **Full Audit Trail**: Every agent step logged to SQLite with timestamps, model info, and latency
-- **HITL Approval**: FastAPI webhook for human review with approve/reject/escalate flow
-- **Hybrid Architecture**: Works fully offline with local AI cluster; Airia enrichment optional
-- **Cinematic Demo Mode**: Built-in demo script with narration for video recording
+```
+aria-agents-hackathon-private/
+├── main.py                              # CLI entry point (5 modes)
+├── pyproject.toml                       # Dependencies
+├── setup_airia_pipelines.py             # One-time Airia pipeline provisioning
+├── .env.example                         # Template
+│
+├── src/
+│   ├── config.py                        # Centralized config (Airia, cluster, markets)
+│   ├── models.py                        # Pydantic models (9 models, strict validation)
+│   ├── database.py                      # SQLite audit trail (5 tables, WAL mode)
+│   ├── orchestrator.py                  # Main pipeline orchestration (3 phases)
+│   ├── airia_bridge.py                  # Airia SDK wrapper (dual mode + 4 FR prompts)
+│   │
+│   ├── agents/
+│   │   │── # Sentinel Group (Treasury Risk)
+│   │   ├── market_intelligence.py       # Agent: CCXT scan + Airia enrichment
+│   │   ├── corporate_context.py         # Agent: Treasury analysis + Airia risks
+│   │   ├── consensus_strategy.py        # Agent: 3-way multi-IA consensus
+│   │   ├── compliance_docs.py           # Agent: PDF report + Airia summary
+│   │   │
+│   │   │── # Meta-Exchange Group (AI Orchestration)
+│   │   ├── meta/
+│   │   │   ├── meta_router.py           # Agent: Intelligent AI provider routing
+│   │   │   ├── context_manager.py       # Agent: Cross-provider memory + dedup
+│   │   │   └── quality_auditor.py       # Agent: Response quality validation
+│   │   │
+│   │   │── # Organizer Group (File Management)
+│   │   ├── organizer/
+│   │   │   ├── librarian.py             # Agent: File scan + classification
+│   │   │   └── dedup_agent.py           # Agent: Deduplication + space recovery
+│   │   │
+│   │   │── # JARVIS Group (Personal Assistant)
+│   │   └── jarvis/
+│   │       ├── intent_classifier.py     # Agent: Intent detection + entity extraction
+│   │       └── execution_engine.py      # Agent: Sub-agent routing + fallback chains
+│   │
+│   ├── services/
+│   │   ├── market_data.py               # CCXT + simulated Forex/Commodities
+│   │   ├── lm_cluster.py               # LM Studio + Ollama interface
+│   │   ├── pdf_generator.py            # ReportLab PDF generation
+│   │   └── hitl_webhook.py             # FastAPI HITL server
+│   │
+│   └── utils/
+│       ├── http_pool.py                 # Async HTTP connection pool (httpx)
+│       └── retry.py                     # Retry with exponential backoff
+│
+├── demo/
+│   └── demo_scenario.py                 # Cinematic demo script (7 steps)
+│
+├── data/
+│   ├── mock_corporate.json              # Simulated ACME Corp treasury data
+│   ├── sentinel.db                      # SQLite database (auto-created)
+│   └── reports/                         # Generated PDF reports
+│
+├── docs/
+│   ├── USE_CASES.md                     # 4 agent groups with architectures
+│   ├── ARCHITECTURE.md                  # Technical deep dive (Mermaid diagrams)
+│   └── EVALUATION.md                    # Airia evaluation results & analysis
+│
+└── launchers/
+    └── SENTINEL.bat                     # Windows launcher
+```
 
 ---
 
@@ -364,14 +488,14 @@ All tables indexed by `run_id` for fast pipeline queries.
 
 | Criteria | Our Response |
 |----------|-------------|
-| **Technical Implementation** | Airia SDK (4 pipelines + deployments) + Local AI Cluster (5 GPU, 43GB VRAM) + CCXT + Multi-IA 3-way Consensus + FastAPI HITL |
-| **UX/UI Design** | Rich CLI dashboard with tables + Professional PDF Reports (ReportLab) + HITL Webhook REST API |
-| **Potential Impact** | Enterprise Treasury Management is a massive market ($1T+). AI-powered risk orchestration reduces decision latency from days to minutes |
-| **Creativity/Uniqueness** | Fusion of local AI infrastructure (5 GPU cluster) + cloud Airia platform + multi-model consensus voting. No other solution combines local LLM inference with Airia pipelines |
+| **Technical Implementation** | Airia SDK (4 pipelines + deployments) + Local AI Cluster (5 GPU, 43GB VRAM) + 12+ agents across 4 groups + CCXT live data + 3-way Multi-IA Consensus + FastAPI HITL + SQLite audit trail |
+| **UX/UI Design** | Rich CLI dashboard + Professional PDF Reports (Big Four style) + HITL REST API + Cinematic demo mode + French prompts |
+| **Potential Impact** | Domain-agnostic Agentic OS: Treasury ($1T+ market), AI governance (cost control), file management, personal AI. Reduces decision latency from days to minutes. |
+| **Creativity/Uniqueness** | Only solution combining local LLM cluster (5 GPU) + cloud Airia platform + multi-model consensus + 4 distinct agent groups showing platform versatility. Not just one use case — a complete agent operating system. |
 
 ---
 
-## Performance (Typical Run)
+## Performance
 
 | Agent | Latency | Sources |
 |-------|---------|---------|
@@ -386,3 +510,15 @@ All tables indexed by `run_id` for fast pipeline queries.
 ## License
 
 MIT
+
+---
+
+<div align="center">
+
+**Built with [Airia](https://airia.ai)** &bull; Agentic OS — Multi-Agent Intelligence Platform
+
+*4 Agent Groups &bull; 12+ Specialized Agents &bull; 5-GPU Cluster &bull; 3-Way Consensus &bull; Full Audit Trail*
+
+*Hackathon submission by [Franck Delmas](https://github.com/Turbo31150)*
+
+</div>

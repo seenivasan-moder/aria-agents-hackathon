@@ -7,16 +7,33 @@ Usage:
     python main.py status           # Cluster health check
     python main.py demo             # Demo scenario for video
     python main.py hitl             # Start HITL webhook server
+    python main.py meta [prompt]    # Meta-Exchange: multi-AI orchestration
+    python main.py organize [dir]   # Organizer: file scan + dedup
+    python main.py jarvis [cmd]     # JARVIS: personal AI assistant
 """
 
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
+
+# Fix Windows cp1252 encoding issues with unicode (Airia returns French text)
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if sys.stderr and hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 from rich.console import Console
 
-console = Console()
+console = Console(force_terminal=True)
 
 BANNER = """
 [bold cyan]
@@ -26,8 +43,8 @@ BANNER = """
  / ___ \\ | ||  _ < | | / ___ \\   ___) | |___| |\\  | | |  | || |\\  | |___| |___
 /_/   \\_\\___|_| \\_\\___/_/   \\_\\ |____/|_____|_| \\_| |_| |___|_| \\_|_____|_____|
 [/]
-[dim]Multi-Agent Treasury Orchestration & Risk Management[/]
-[dim]Powered by Airia + LM Studio Cluster + CCXT[/]
+[dim]Multi-Agent Orchestration Platform — Treasury · Meta-Exchange · Organizer · JARVIS[/]
+[dim]Powered by Airia + LM Studio Cluster + Ollama + CCXT[/]
 """
 
 
@@ -44,11 +61,20 @@ def main():
         asyncio.run(_demo())
     elif mode == "hitl":
         _hitl()
+    elif mode == "meta":
+        prompt = " ".join(sys.argv[2:]) if len(sys.argv) > 2 else ""
+        asyncio.run(_meta(prompt))
+    elif mode == "organize":
+        target = sys.argv[2] if len(sys.argv) > 2 else ""
+        asyncio.run(_organize(target))
+    elif mode == "jarvis":
+        user_input = " ".join(sys.argv[2:]) if len(sys.argv) > 2 else ""
+        asyncio.run(_jarvis(user_input))
     elif mode in ("pipeline", "full", "run"):
         asyncio.run(_pipeline())
     else:
         console.print(f"[red]Unknown mode:[/] {mode}")
-        console.print("Available: pipeline, scan, status, demo, hitl")
+        console.print("Available: pipeline, scan, status, demo, hitl, meta, organize, jarvis")
         sys.exit(1)
 
 
@@ -75,6 +101,24 @@ async def _demo():
 def _hitl():
     from src.services.hitl_webhook import start_server
     start_server()
+
+
+async def _meta(prompt: str = ""):
+    from src.orchestrator import run_meta_exchange
+    kwargs = {"prompt": prompt} if prompt else {}
+    await run_meta_exchange(**kwargs)
+
+
+async def _organize(target_dir: str = ""):
+    from src.orchestrator import run_organizer
+    kwargs = {"target_dir": target_dir} if target_dir else {}
+    await run_organizer(**kwargs)
+
+
+async def _jarvis(user_input: str = ""):
+    from src.orchestrator import run_jarvis
+    kwargs = {"user_input": user_input} if user_input else {}
+    await run_jarvis(**kwargs)
 
 
 if __name__ == "__main__":

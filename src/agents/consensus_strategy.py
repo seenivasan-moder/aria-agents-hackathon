@@ -156,6 +156,10 @@ async def run(
             if parsed:
                 all_strategies.append(parsed)
                 models_used.append(resp.get("model", resp.get("node", "local")))
+            else:
+                console.print(f"  [yellow]! {resp.get('node', '?')}:[/] response received but JSON parsing failed")
+        else:
+            console.print(f"  [red]X {resp.get('node', '?')}:[/] {resp.get('error', 'unknown error')}")
 
     # Source 3: Airia pipeline (best-effort)
     if bridge.is_available:
