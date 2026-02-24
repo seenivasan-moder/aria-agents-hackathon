@@ -148,8 +148,8 @@ async def run(
     all_strategies: list[list[HedgingStrategy]] = []
     models_used: list[str] = []
 
-    # Source 1+2: LM Studio (M1) + Ollama (OL1) in parallel
-    cluster_result = await cluster_consensus(prompt, nodes=["M1", "OL1"])
+    # Source 1+2+3: LM Studio (M1, M2) + Ollama (OL1) in parallel
+    cluster_result = await cluster_consensus(prompt, nodes=["M1", "M2", "OL1"])
     for resp in cluster_result.get("responses", []):
         if resp.get("ok"):
             parsed = _parse_strategies(resp["content"])

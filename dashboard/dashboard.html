@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIRIA SENTINEL — Multi-Agent Orchestration Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   CSS RESET & VARIABLES
+   ═══════════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #0f1525;
+  --bg-card: rgba(15, 21, 40, 0.7);
+  --bg-card-hover: rgba(20, 28, 55, 0.85);
+  --border: rgba(100, 120, 180, 0.12);
+  --border-glow: rgba(124, 58, 237, 0.25);
+
+  --cyan: #22d3ee;
+  --cyan-dim: rgba(34, 211, 238, 0.15);
+  --purple: #7C3AED;
+  --purple-dim: rgba(124, 58, 237, 0.15);
+  --purple-bright: #a78bfa;
+  --green: #34d399;
+  --green-dim: rgba(52, 211, 153, 0.15);
+  --red: #f87171;
+  --red-dim: rgba(248, 113, 113, 0.15);
+  --yellow: #fbbf24;
+  --yellow-dim: rgba(251, 191, 36, 0.15);
+  --blue: #60a5fa;
+  --orange: #fb923c;
+
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-dim: #64748b;
+  --text-bright: #f8fafc;
+
+  --font-sans: 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', monospace;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-xs: 4px;
+
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+  --shadow-glow: 0 0 30px rgba(124, 58, 237, 0.08);
+}
+
+html { font-size: 14px; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.5;
+}
+
+/* Animated background grid */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(rgba(124, 58, 237, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 58, 237, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Subtle radial glow behind header */
+body::after {
+  content: '';
+  position: fixed;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  height: 600px;
+  background: radial-gradient(ellipse, rgba(124,58,237,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(124,58,237,0.5); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   LAYOUT
+   ═══════════════════════════════════════════════════════════════════ */
+.dashboard {
+  position: relative;
+  z-index: 1;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 16px 20px 40px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ANIMATED BORDER WRAPPER
+   ═══════════════════════════════════════════════════════════════════ */
+.outer-frame {
+  position: relative;
+  z-index: 1;
+  padding: 2px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--purple), var(--cyan), var(--purple), var(--cyan));
+  background-size: 400% 400%;
+  animation: borderGlow 8s ease infinite;
+  margin-bottom: 20px;
+}
+.outer-frame-inner {
+  background: var(--bg-primary);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+@keyframes borderGlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════════════════════════════ */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 28px;
+  background: linear-gradient(135deg, rgba(124,58,237,0.06), rgba(34,211,238,0.04));
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.header-left { display: flex; align-items: center; gap: 16px; }
+
+.logo-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--purple), var(--cyan));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 20px; color: #fff;
+  box-shadow: 0 0 20px rgba(124,58,237,0.3);
+  animation: logoPulse 3s ease-in-out infinite;
+}
+@keyframes logoPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(124,58,237,0.3); }
+  50% { box-shadow: 0 0 35px rgba(124,58,237,0.5), 0 0 60px rgba(34,211,238,0.15); }
+}
+
+.logo-text h1 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 3px;
+  background: linear-gradient(135deg, var(--purple-bright), var(--cyan));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.logo-text .subtitle {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.header-badges { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.badge {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+}
+.badge .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: dotPulse 2s ease-in-out infinite;
+}
+.badge .dot.offline { background: var(--red); animation: none; }
+.badge .dot.warning { background: var(--yellow); }
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.ws-status {
+  font-size: 0.7rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-family: var(--font-mono);
+  border: 1px solid;
+}
+.ws-status.connected { color: var(--green); border-color: rgba(52,211,153,0.3); background: var(--green-dim); }
+.ws-status.disconnected { color: var(--red); border-color: rgba(248,113,113,0.3); background: var(--red-dim); }
+.ws-status.connecting { color: var(--yellow); border-color: rgba(251,191,36,0.3); background: var(--yellow-dim); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   GRID LAYOUT
+   ═══════════════════════════════════════════════════════════════════ */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  padding: 20px 28px;
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(12, 1fr);
+  }
+  .grid .pipeline-section { grid-column: span 12; }
+  .grid .signals-section { grid-column: span 7; }
+  .grid .consensus-section { grid-column: span 5; }
+  .grid .gauges-section { grid-column: span 4; }
+  .grid .cluster-section { grid-column: span 4; }
+  .grid .hitl-section { grid-column: span 4; }
+  .grid .audit-section { grid-column: span 8; }
+  .grid .stats-section { grid-column: span 4; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CARD (Glass morphism)
+   ═══════════════════════════════════════════════════════════════════ */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+  transition: border-color 0.3s, box-shadow 0.3s;
+  overflow: hidden;
+}
+.card:hover {
+  border-color: var(--border-glow);
+  box-shadow: var(--shadow), var(--shadow-glow);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.card-header h2 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-secondary);
+}
+.card-header .accent-bar {
+  width: 3px; height: 16px;
+  border-radius: 2px;
+  margin-right: 10px;
+  display: inline-block;
+}
+.card-header .header-flex { display: flex; align-items: center; }
+
+.card-body { padding: 14px 18px 18px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   PIPELINE FLOW
+   ═══════════════════════════════════════════════════════════════════ */
+.pipeline-flow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  padding: 8px 0 12px;
+}
+
+.phase-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.phase-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--purple-bright);
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+.phase-agents {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.phase-group.parallel .phase-agents {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.agent-node {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  min-width: 130px;
+}
+.agent-node::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px; height: 100%;
+  border-radius: 2px 0 0 2px;
+  background: var(--text-dim);
+  transition: background 0.3s;
+}
+
+.agent-node.pending::before { background: var(--text-dim); }
+.agent-node.running::before { background: var(--cyan); animation: runPulse 1.2s ease-in-out infinite; }
+.agent-node.done::before { background: var(--green); }
+.agent-node.error::before { background: var(--red); }
+
+.agent-node.running {
+  border-color: rgba(34,211,238,0.3);
+  box-shadow: 0 0 15px rgba(34,211,238,0.08);
+}
+.agent-node.done {
+  border-color: rgba(52,211,153,0.2);
+}
+.agent-node.error {
+  border-color: rgba(248,113,113,0.3);
+}
+
+@keyframes runPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.agent-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+}
+.agent-meta .latency { color: var(--cyan); }
+.agent-meta .model { color: var(--purple-bright); }
+
+.agent-status-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 3px;
+}
+.agent-status-badge.pending { background: rgba(100,116,139,0.2); color: var(--text-dim); }
+.agent-status-badge.running { background: var(--cyan-dim); color: var(--cyan); }
+.agent-status-badge.done { background: var(--green-dim); color: var(--green); }
+.agent-status-badge.error { background: var(--red-dim); color: var(--red); }
+
+/* Phase connector arrows */
+.phase-connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  align-self: center;
+  margin-top: 20px;
+}
+.phase-connector svg {
+  width: 28px; height: 28px;
+  color: var(--purple);
+  opacity: 0.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MARKET SIGNALS TABLE
+   ═══════════════════════════════════════════════════════════════════ */
+.signals-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+.signals-table thead th {
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.65rem;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  z-index: 2;
+}
+.signals-table tbody tr {
+  border-bottom: 1px solid rgba(100,120,180,0.06);
+  transition: background 0.2s;
+}
+.signals-table tbody tr:hover { background: rgba(124,58,237,0.05); }
+.signals-table td {
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+.signals-table .symbol-cell { font-weight: 600; color: var(--text-bright); }
+.signals-table .price-cell { color: var(--text-primary); }
+.signals-table .bullish { color: var(--green); }
+.signals-table .bearish { color: var(--red); }
+.signals-table .neutral { color: var(--yellow); }
+
+.risk-bar-container {
+  width: 50px; height: 5px;
+  background: rgba(100,120,180,0.15);
+  border-radius: 3px;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 5px;
+}
+.risk-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+.signals-scroll {
+  max-height: 310px;
+  overflow-y: auto;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CONSENSUS CARDS
+   ═══════════════════════════════════════════════════════════════════ */
+.strategy-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  transition: all 0.3s;
+  position: relative;
+}
+.strategy-card.recommended {
+  border-color: rgba(124,58,237,0.4);
+  background: rgba(124,58,237,0.06);
+}
+.strategy-card .rec-badge {
+  position: absolute;
+  top: 8px; right: 10px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--purple-bright);
+  background: var(--purple-dim);
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.strategy-name {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-bright);
+  margin-bottom: 6px;
+}
+.strategy-desc {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+.strategy-metrics {
+  display: flex;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  flex-wrap: wrap;
+}
+.strategy-metrics span { white-space: nowrap; }
+.strategy-metrics .label { color: var(--text-dim); }
+.strategy-metrics .value { color: var(--text-primary); font-weight: 500; }
+
+.confidence-bar-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(100,120,180,0.12);
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.confidence-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--purple), var(--cyan));
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SVG GAUGES
+   ═══════════════════════════════════════════════════════════════════ */
+.gauges-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.gauge-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.gauge-svg {
+  width: 110px; height: 110px;
+  transform: rotate(-90deg);
+}
+.gauge-bg {
+  fill: none;
+  stroke: rgba(100,120,180,0.1);
+  stroke-width: 6;
+}
+.gauge-fill {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.5s;
+}
+
+.gauge-value-text {
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  font-weight: 700;
+  fill: var(--text-bright);
+  text-anchor: middle;
+  dominant-baseline: central;
+  transform: rotate(90deg);
+  transform-origin: center;
+}
+
+.gauge-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CLUSTER NODES
+   ═══════════════════════════════════════════════════════════════════ */
+.cluster-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+@media (min-width: 640px) {
+  .cluster-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+.cluster-node {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  text-align: center;
+  transition: all 0.3s;
+  position: relative;
+}
+.cluster-node.online { border-color: rgba(52,211,153,0.2); }
+.cluster-node.offline { border-color: rgba(248,113,113,0.2); opacity: 0.6; }
+
+.cluster-node .node-name {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-bright);
+}
+.cluster-node .node-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  margin-top: 4px;
+}
+.cluster-node .node-model {
+  font-size: 0.62rem;
+  color: var(--purple-bright);
+  font-family: var(--font-mono);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cluster-node .node-latency {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--cyan);
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   HITL APPROVAL
+   ═══════════════════════════════════════════════════════════════════ */
+.hitl-status {
+  text-align: center;
+  padding: 10px 0;
+}
+.hitl-status-icon {
+  font-size: 2.5rem;
+  margin-bottom: 6px;
+}
+.hitl-status-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.hitl-run-id {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
+
+.hitl-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.btn {
+  padding: 10px 24px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid;
+  outline: none;
+  text-transform: uppercase;
+}
+.btn:active { transform: scale(0.97); }
+
+.btn-approve {
+  background: var(--green-dim);
+  color: var(--green);
+  border-color: rgba(52,211,153,0.3);
+}
+.btn-approve:hover {
+  background: rgba(52,211,153,0.25);
+  box-shadow: 0 0 20px rgba(52,211,153,0.15);
+}
+
+.btn-reject {
+  background: var(--red-dim);
+  color: var(--red);
+  border-color: rgba(248,113,113,0.3);
+}
+.btn-reject:hover {
+  background: rgba(248,113,113,0.25);
+  box-shadow: 0 0 20px rgba(248,113,113,0.15);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hitl-result {
+  margin-top: 12px;
+  padding: 8px 14px;
+  border-radius: var(--radius-xs);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  display: none;
+}
+.hitl-result.approved { display: block; background: var(--green-dim); color: var(--green); }
+.hitl-result.rejected { display: block; background: var(--red-dim); color: var(--red); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   AUDIT TRAIL
+   ═══════════════════════════════════════════════════════════════════ */
+.audit-log {
+  max-height: 260px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
+.audit-entry {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(100,120,180,0.05);
+  animation: auditFadeIn 0.4s ease;
+}
+@keyframes auditFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.audit-time { color: var(--text-dim); white-space: nowrap; min-width: 70px; }
+.audit-agent {
+  color: var(--purple-bright);
+  font-weight: 600;
+  min-width: 90px;
+  white-space: nowrap;
+}
+.audit-msg { color: var(--text-secondary); flex: 1; }
+.audit-latency { color: var(--cyan); white-space: nowrap; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   STATS FOOTER
+   ═══════════════════════════════════════════════════════════════════ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.stat-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  text-align: center;
+}
+.stat-value {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-bright);
+  line-height: 1.1;
+}
+.stat-label {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 3px;
+}
+
+.stat-value.purple { color: var(--purple-bright); }
+.stat-value.cyan { color: var(--cyan); }
+.stat-value.green { color: var(--green); }
+.stat-value.yellow { color: var(--yellow); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 1023px) {
+  .pipeline-flow { flex-direction: column; align-items: stretch; }
+  .phase-connector { transform: rotate(90deg); padding: 4px 0; }
+  .phase-group.parallel .phase-agents { grid-template-columns: 1fr 1fr; }
+  .gauges-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 640px) {
+  .header { flex-direction: column; align-items: flex-start; }
+  .gauges-grid { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .gauge-svg { width: 80px; height: 80px; }
+  .cluster-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="dashboard">
+  <!-- ANIMATED OUTER FRAME -->
+  <div class="outer-frame">
+    <div class="outer-frame-inner">
+
+      <!-- HEADER -->
+      <div class="header">
+        <div class="header-left">
+          <div class="logo-icon">AS</div>
+          <div class="logo-text">
+            <h1>AIRIA SENTINEL</h1>
+            <div class="subtitle">Multi-Agent Orchestration Platform &mdash; Treasury Risk Intelligence</div>
+          </div>
+        </div>
+        <div class="header-badges">
+          <div class="badge"><span class="dot" id="systemDot"></span><span id="agentCountBadge">10 Agents</span></div>
+          <div class="badge"><span class="dot" id="pipelineDot"></span><span id="pipelineStatusBadge">Pipeline Ready</span></div>
+          <div class="badge"><span class="dot" id="airiaDot"></span><span>Airia SDK</span></div>
+          <div class="ws-status disconnected" id="wsStatus">WS: DISCONNECTED</div>
+        </div>
+      </div>
+
+      <!-- MAIN GRID -->
+      <div class="grid">
+
+        <!-- PIPELINE STATUS -->
+        <section class="card pipeline-section">
+          <div class="card-header">
+            <div class="header-flex">
+              <span class="accent-bar" style="background: linear-gradient(var(--purple), var(--cyan))"></span>
+              <h2>Pipeline Flow &mdash; 10 Agent Orchestration</h2>
+            </div>
+            <span id="pipelineTimer" style="font-family:var(--font-mono);font-size:0.75rem;color:var(--cyan)">0.0s</span>
+          </div>
+          <div class="card-body">
+            <div class="pipeline-flow" id="pipelineFlow">
+              <!-- Phase 1: Parallel -->
+              <div class="phase-group parallel">
+                <div class="phase-label">Phase 1 &mdash; Gather</div>
+                <div class="phase-agents">
+                  <div class="agent-node done" data-agent="market_intelligence">
+                    <div class="agent-name">Market Intelligence</div>
+                    <div class="agent-meta"><span class="latency">312ms</span><span class="model">Airia</span></div>
+                    <div class="agent-status-badge done">done</div>
+                  </div>
+                  <div class="agent-node done" data-agent="corporate_context">
+                    <div class="agent-name">Corporate Context</div>
+                    <div class="agent-meta"><span class="latency">287ms</span><span class="model">Airia</span></div>
+                    <div class="agent-status-badge done">done</div>
+                  </div>
+                  <div class="agent-node done" data-agent="anomaly_detector">
+                    <div class="agent-name">Anomaly Detector</div>
+                    <div class="agent-meta"><span class="latency">45ms</span><span class="model">numpy</span></div>
+                    <div class="agent-status-badge done">done</div>
+                  </div>
+                  <div class="agent-node done" data-agent="sentiment_scorer">
+                    <div class="agent-name">Sentiment Scorer</div>
+                    <div class="agent-meta"><span class="latency">198ms</span><span class="model">OL1</span></div>
+                    <div class="agent-status-badge done">done</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="phase-connector">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+              </div>
+
+              <!-- Phase 2: Sequential -->
+              <div class="phase-group">
+                <div class="phase-label">Phase 2 &mdash; Analyze</div>
+                <div class="phase-agents">
+                  <div class="agent-node done" data-agent="risk_aggregator">
+                    <div class="agent-name">Risk Aggregator</div>
+                    <div class="agent-meta"><span class="latency">1.2s</span><span class="model">M1/qwen3</span></div>
+                    <div class="agent-status-badge done">done</div>
+                  </div>
+                  <div class="agent-node running" data-agent="consensus_strategy">
+                    <div class="agent-name">Consensus Strategy</div>
+                    <div class="agent-meta"><span class="latency">2.4s</span><span class="model">M1+OL1+Airia</span></div>
+                    <div class="agent-status-badge running">running</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="phase-connector">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+              </div>
+
+              <!-- Phase 3 -->
+              <div class="phase-group">
+                <div class="phase-label">Phase 3 &mdash; Size</div>
+                <div class="phase-agents">
+                  <div class="agent-node pending" data-agent="position_sizer">
+                    <div class="agent-name">Position Sizer</div>
+                    <div class="agent-meta"><span class="latency">--</span><span class="model">numpy</span></div>
+                    <div class="agent-status-badge pending">pending</div>
+                  </div>
+                  <div class="agent-node pending" data-agent="strategy_backtester">
+                    <div class="agent-name">Strategy Backtester</div>
+                    <div class="agent-meta"><span class="latency">--</span><span class="model">M2</span></div>
+                    <div class="agent-status-badge pending">pending</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="phase-connector">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+              </div>
+
+              <!-- Phase 4 -->
+              <div class="phase-group">
+                <div class="phase-label">Phase 4 &mdash; Report</div>
+                <div class="phase-agents">
+                  <div class="agent-node pending" data-agent="compliance">
+                    <div class="agent-name">Compliance Check</div>
+                    <div class="agent-meta"><span class="latency">--</span><span class="model">Airia</span></div>
+                    <div class="agent-status-badge pending">pending</div>
+                  </div>
+                  <div class="agent-node pending" data-agent="report_synthesizer">
+                    <div class="agent-name">Report Synthesizer</div>
+                    <div class="agent-meta"><span class="latency">--</span><span class="model">M2+PDF</span></div>
+                    <div class="agent-status-badge pending">pending</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- MARKET SIGNALS -->
+        <section class="card signals-section">
+          <div class="card-header">
+            <div class="header-flex">
+              <span class="accent-bar" style="background: var(--cyan)"></span>
+              <h2>Market Signals</h2>
+            </div>
+            <span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim)" id="signalCount">10 assets</span>
+          </div>
+          <div class="card-body">
+            <div class="signals-scroll">
+              <table class="signals-table">
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Price</th>
+                    <th>24h</th>
+                    <th>Vol%</th>
+                    <th>Risk</th>
+                    <th>Dir</th>
+                    <th>Regime</th>
+                  </tr>
+                </thead>
+                <tbody id="signalsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- CONSENSUS -->
+        <section class="card consensus-section">
+          <div class="card-header">
+            <div class="header-flex">
+              <span class="accent-bar" style="background: var(--purple)"></span>
+              <h2>Consensus Strategies</h2>
+            </div>
+            <span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim)" id="consensusModels">M1+OL1+Airia</span>
+          </div>
+          <div class="card-body" id="consensusBody"></div>
+        </section>
+
+        <!-- RISK GAUGES -->
+        <section class="card gauges-section">
+          <div class="card-header">
+            <div class="header-flex">
+              <span class="accent-bar" style="background: var(--orange)"></span>
+              <h2>Risk Gauges</h2>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="gauges-grid">
+              <div class="gauge-item">
+                <svg class="gauge-svg" viewBox="0 0 120 120">
+                  <circle class="gauge-bg" cx="60" cy="60" r="50"/>
+                  <circle class="gauge-fill" id="gaugeRisk" cx="60" cy="60" r="50"
+                    stroke="var(--yellow)" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+                  <text class="gauge-value-text" x="60" y="60" id="gaugeRiskVal">0</text>
+                </svg>
+                <div class="gauge-label">Overall Risk</div>
+              </div>
+              <div class="gauge-item">
+                <svg class="gauge-svg" viewBox="0 0 120 120">
+                  <circle class="gauge-bg" cx="60" cy="60" r="50"/>
+                  <circle class="gauge-fill" id="gaugeStress" cx="60" cy="60" r="50"
+                    stroke="var(--red)" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+                  <text class="gauge-value-text" x="60" y="60" id="gaugeStressVal">0</text>
+                </svg>
+                <div class="gauge-label">Market Stress</div>
+              </div>
+              <div class="gauge-item">
+                <svg class="gauge-svg" viewBox="0 0 120 120">
+                  <circle class="gauge-bg" cx="60" cy="60" r="50"/>
+                  <circle class="gauge-fill" id="gaugeSentiment" cx="60" cy="60" r="50"
+                    stroke="var(--green)" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+                  <text class="gauge-value-text" x="60" y="60" id="gaugeSentimentVal">0</text>
+                </svg>
+                <div class="gauge-label">Sentiment</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CLUSTER STATUS -->
+        <section class="card cluster-section">
+          <div class="card-header">
+            <div class="header-flex">
+              <span class="accent-bar" style="background: var(--green)"></span>
+              <h2>Cluster Nodes</h2>
+            </div>
+            <span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--green)" id="clusterOnline">5/5 online</span>
+          </div>
+          <div class="card-body">
+            <div class="cluster-grid" id="clusterGrid"></div>
+          </div>
+        </section>
+
+        <!-- HITL APPROVAL -->
+        <section class="card hitl-section">
+          <div class="card-header">
+            <div class="header-flex">
+              <span class="accent-bar" style="background: var(--yellow)"></span>
+              <h2>HITL Approval Gateway</h2>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="hitl-status">
+              <div class="hitl-status-icon" id="hitlIcon"></div>
+              <div class="hitl-status-text" id="hitlStatusText" style="color:var(--yellow)">Awaiting Human Approval</div>
+              <div class="hitl-run-id" id="hitlRunId">run: a3f8c7e21b04</div>
+              <div style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:12px" id="hitlStrategy">Strategy: Moderate Hedging (Recommended)</div>
+              <div class="hitl-buttons">
+                <button class="btn btn-approve" id="btnApprove">APPROVE</button>
+                <button class="btn btn-reject" id="btnReject">REJECT</button>
+              </div>
+              <div class="hitl-result" id="hitlResult"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- AUDIT TRAIL -->
+        <section class="card audit-section">
+          <div class="card-header">
+            <div class="header-flex">
+              <span class="accent-bar" style="background: var(--blue)"></span>
+              <h2>Audit Trail</h2>
+            </div>
+            <span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim)" id="auditCount">0 events</span>
+          </div>
+          <div class="card-body">
+            <div class="audit-log" id="auditLog"></div>
+          </div>
+        </section>
+
+        <!-- STATS FOOTER -->
+        <section class="card stats-section">
+          <div class="card-header">
+            <div class="header-flex">
+              <span class="accent-bar" style="background: var(--cyan)"></span>
+              <h2>Pipeline Stats</h2>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="stats-grid">
+              <div class="stat-item">
+                <div class="stat-value purple" id="statAgents">10</div>
+                <div class="stat-label">Total Agents</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value cyan" id="statLatency">4.8s</div>
+                <div class="stat-label">Total Latency</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value yellow" id="statAiria">6</div>
+                <div class="stat-label">Airia Calls</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value green" id="statSuccess">92%</div>
+                <div class="stat-label">Success Rate</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div><!-- /grid -->
+    </div><!-- /outer-frame-inner -->
+  </div><!-- /outer-frame -->
+</div><!-- /dashboard -->
+
+
+<script>
+(function() {
+  "use strict";
+
+  // ═══════════════════════════════════════════════════════════════════
+  // CONFIGURATION
+  // ═══════════════════════════════════════════════════════════════════
+
+  var WS_URL = 'ws://localhost:8900/ws';
+  var API_URL = 'http://localhost:8900';
+  var POLL_INTERVAL = 5000;
+
+  // ═══════════════════════════════════════════════════════════════════
+  // MOCK DATA
+  // ═══════════════════════════════════════════════════════════════════
+
+  var MOCK_SIGNALS = [
+    { symbol: 'BTC/USDT',  asset_class: 'crypto',    price: 97842.50,  change_24h: 2.34,   volatility: 3.12, risk_score: 42, direction: 'bullish',  regime: 'overbought' },
+    { symbol: 'ETH/USDT',  asset_class: 'crypto',    price: 3621.80,   change_24h: 1.87,   volatility: 4.21, risk_score: 38, direction: 'bullish',  regime: 'neutral' },
+    { symbol: 'SOL/USDT',  asset_class: 'crypto',    price: 198.42,    change_24h: -0.93,  volatility: 6.88, risk_score: 65, direction: 'neutral',  regime: 'neutral' },
+    { symbol: 'EUR/USD',   asset_class: 'forex',     price: 1.0847,    change_24h: -0.12,  volatility: 0.45, risk_score: 15, direction: 'bearish',  regime: 'neutral' },
+    { symbol: 'GBP/USD',   asset_class: 'forex',     price: 1.2634,    change_24h: 0.08,   volatility: 0.52, risk_score: 18, direction: 'neutral',  regime: 'neutral' },
+    { symbol: 'JPY/USD',   asset_class: 'forex',     price: 0.00667,   change_24h: -0.34,  volatility: 0.68, risk_score: 28, direction: 'bearish',  regime: 'oversold' },
+    { symbol: 'XAU/USD',   asset_class: 'commodity', price: 2958.30,   change_24h: 0.67,   volatility: 1.23, risk_score: 22, direction: 'bullish',  regime: 'overbought' },
+    { symbol: 'XAG/USD',   asset_class: 'commodity', price: 33.45,     change_24h: 1.12,   volatility: 2.45, risk_score: 35, direction: 'bullish',  regime: 'neutral' },
+    { symbol: 'CL/USD',    asset_class: 'commodity', price: 71.28,     change_24h: -1.45,  volatility: 2.89, risk_score: 52, direction: 'bearish',  regime: 'neutral' },
+    { symbol: 'NG/USD',    asset_class: 'commodity', price: 3.842,     change_24h: -2.18,  volatility: 5.67, risk_score: 71, direction: 'bearish',  regime: 'oversold' },
+  ];
+
+  var MOCK_CONSENSUS = {
+    strategies: [
+      {
+        name: 'Conservative Hedging',
+        description: 'Full forward cover on EUR/USD and GBP/USD exposures. Options collar on commodity positions. Minimal crypto exposure.',
+        confidence: 82,
+        cost_estimate_pct: 0.35,
+        risk_reduction_pct: 78,
+        expected_return_pct: 2.1,
+        risk_level: 'low',
+      },
+      {
+        name: 'Moderate Hedging',
+        description: 'Selective hedging of top-3 risk exposures. Dynamic delta hedging on crypto positions. Partial commodity options.',
+        confidence: 74,
+        cost_estimate_pct: 0.52,
+        risk_reduction_pct: 61,
+        expected_return_pct: 5.8,
+        risk_level: 'medium',
+      },
+      {
+        name: 'Aggressive Growth',
+        description: 'Leverage bullish crypto momentum with trailing stops. Opportunistic commodity positions. Minimal FX hedging.',
+        confidence: 58,
+        cost_estimate_pct: 0.18,
+        risk_reduction_pct: 28,
+        expected_return_pct: 12.4,
+        risk_level: 'high',
+      },
+    ],
+    recommended_index: 1,
+    consensus_score: 74,
+    models_used: ['M1/qwen3-30b', 'OL1/qwen3:1.7b', 'Airia/GPT-4o'],
+  };
+
+  var MOCK_CLUSTER = [
+    { name: 'M1',    online: true,  latency_ms: 141, model: 'qwen3-30b',      role: 'Deep Analysis',     gpu: '6 GPU 46GB' },
+    { name: 'M2',    online: true,  latency_ms: 76,  model: 'deepseek-coder',  role: 'Code Generation',   gpu: '3 GPU 24GB' },
+    { name: 'M3',    online: true,  latency_ms: 58,  model: 'mistral-7b',      role: 'General',           gpu: '1 GPU 8GB'  },
+    { name: 'OL1',   online: true,  latency_ms: 41,  model: 'qwen3:1.7b',     role: 'Lightweight',       gpu: '5 GPU 40GB' },
+    { name: 'Airia', online: true,  latency_ms: 320, model: 'GPT-4o / Claude', role: 'Cloud Orchestrator', gpu: 'Cloud' },
+  ];
+
+  var MOCK_GAUGES = { risk: 47, stress: 32, sentiment: 68 };
+
+  var MOCK_AUDIT = [
+    { time: '14:32:01', agent: 'Orchestrator',  msg: 'Pipeline started \u2014 run a3f8c7e21b04', latency: '' },
+    { time: '14:32:01', agent: 'Market Intel',   msg: 'Scanning 10 pairs (crypto, forex, commodity)', latency: '' },
+    { time: '14:32:01', agent: 'Corporate Ctx',  msg: 'Loading ACME-CORP treasury positions', latency: '' },
+    { time: '14:32:01', agent: 'Anomaly Detect', msg: 'Statistical analysis launched (numpy)', latency: '' },
+    { time: '14:32:01', agent: 'Sentiment',      msg: 'OL1 qwen3:1.7b query initiated', latency: '' },
+    { time: '14:32:02', agent: 'Anomaly Detect', msg: '3 anomalies found (2 z-score, 1 volume spike)', latency: '45ms' },
+    { time: '14:32:02', agent: 'Sentiment',      msg: 'Score: +32 (Mildly Bullish), regime: neutral', latency: '198ms' },
+    { time: '14:32:02', agent: 'Corporate Ctx',  msg: 'Exposure loaded: 5 positions, risk 42/100', latency: '287ms' },
+    { time: '14:32:02', agent: 'Market Intel',   msg: '10 signals processed \u2014 3 bullish, 4 bearish, 3 neutral', latency: '312ms' },
+    { time: '14:32:02', agent: 'Risk Aggregator', msg: 'Fusing market + corporate + sentiment signals', latency: '' },
+    { time: '14:32:03', agent: 'Risk Aggregator', msg: 'Risk profile: 47/100 (MEDIUM) \u2014 2 cascade risks', latency: '1.2s' },
+    { time: '14:32:03', agent: 'Consensus',      msg: '3-way consensus: M1 + OL1 + Airia', latency: '' },
+    { time: '14:32:05', agent: 'Consensus',      msg: '3 strategies generated \u2014 Moderate recommended (74%)', latency: '2.4s' },
+    { time: '14:32:05', agent: 'Orchestrator',   msg: 'Phase 2 complete \u2014 awaiting Position Sizer', latency: '' },
+  ];
+
+  // ═══════════════════════════════════════════════════════════════════
+  // STATE
+  // ═══════════════════════════════════════════════════════════════════
+
+  var ws = null;
+  var wsReconnectTimer = null;
+  var pollTimer = null;
+  var currentRunId = 'a3f8c7e21b04';
+
+  // ═══════════════════════════════════════════════════════════════════
+  // SAFE DOM HELPERS
+  // ═══════════════════════════════════════════════════════════════════
+
+  function el(id) { return document.getElementById(id); }
+  function txt(id, value) { el(id).textContent = value; }
+
+  function clearChildren(parent) {
+    while (parent.firstChild) parent.removeChild(parent.firstChild);
+  }
+
+  function createElement(tag, className, textContent) {
+    var e = document.createElement(tag);
+    if (className) e.className = className;
+    if (textContent !== undefined) e.textContent = textContent;
+    return e;
+  }
+
+  function setAttr(elem, key, val) { elem.setAttribute(key, val); }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // INITIALIZATION
+  // ═══════════════════════════════════════════════════════════════════
+
+  document.addEventListener('DOMContentLoaded', function() {
+    updateMarketSignals(MOCK_SIGNALS);
+    updateConsensus(MOCK_CONSENSUS);
+    updateCluster(MOCK_CLUSTER);
+    updateGauges(MOCK_GAUGES);
+    renderAuditLog(MOCK_AUDIT);
+    updateStats({ agents: 10, latency: '4.8s', airia_calls: 6, success_rate: '92%' });
+
+    // Set HITL icon
+    el('hitlIcon').textContent = '\u26A0\uFE0F';
+
+    // Wire up buttons
+    el('btnApprove').addEventListener('click', approveStrategy);
+    el('btnReject').addEventListener('click', rejectStrategy);
+
+    connectWebSocket();
+    startPolling();
+    simulatePipelineProgress();
+  });
+
+  // ═══════════════════════════════════════════════════════════════════
+  // WEBSOCKET
+  // ═══════════════════════════════════════════════════════════════════
+
+  function connectWebSocket() {
+    updateWsStatus('connecting');
+    try {
+      ws = new WebSocket(WS_URL);
+      ws.onopen = function() {
+        updateWsStatus('connected');
+        addAuditEntry('WebSocket', 'Connected to pipeline event stream', '');
+      };
+      ws.onmessage = function(event) {
+        try {
+          var data = JSON.parse(event.data);
+          handleWsMessage(data);
+        } catch (e) { /* parse error */ }
+      };
+      ws.onclose = function() {
+        updateWsStatus('disconnected');
+        scheduleReconnect();
+      };
+      ws.onerror = function() {
+        updateWsStatus('disconnected');
+      };
+    } catch (e) {
+      updateWsStatus('disconnected');
+      scheduleReconnect();
+    }
+  }
+
+  function scheduleReconnect() {
+    if (wsReconnectTimer) return;
+    wsReconnectTimer = setTimeout(function() {
+      wsReconnectTimer = null;
+      connectWebSocket();
+    }, 5000);
+  }
+
+  function updateWsStatus(status) {
+    var e = el('wsStatus');
+    e.className = 'ws-status ' + status;
+    var labels = { connected: 'WS: LIVE', disconnected: 'WS: OFFLINE', connecting: 'WS: CONNECTING...' };
+    e.textContent = labels[status] || status;
+  }
+
+  function handleWsMessage(data) {
+    if (data.type === 'pipeline_event' || data.type === 'agent_update') {
+      if (data.agents) updatePipeline(data.agents);
+      if (data.agent) updateSingleAgent(data.agent);
+    }
+    if (data.type === 'signals' && data.signals) updateMarketSignals(data.signals);
+    if (data.type === 'consensus' && data.consensus) updateConsensus(data.consensus);
+    if (data.type === 'cluster' && data.nodes) updateCluster(data.nodes);
+    if (data.type === 'gauges' && data.gauges) updateGauges(data.gauges);
+    if (data.type === 'audit' && data.entry) {
+      addAuditEntry(data.entry.agent, data.entry.msg, data.entry.latency || '');
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // REST POLLING
+  // ═══════════════════════════════════════════════════════════════════
+
+  function startPolling() {
+    pollTimer = setInterval(function() {
+      fetch(API_URL + '/', { signal: AbortSignal.timeout(4000) })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          if (data && data.status) txt('pipelineStatusBadge', data.status);
+        })
+        .catch(function() {});
+
+      fetch(API_URL + '/pending', { signal: AbortSignal.timeout(4000) })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          if (data && data.pending && data.pending.length > 0) {
+            currentRunId = data.pending[0].run_id || currentRunId;
+            txt('hitlRunId', 'run: ' + currentRunId);
+          }
+        })
+        .catch(function() {});
+    }, POLL_INTERVAL);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PIPELINE UPDATE
+  // ═══════════════════════════════════════════════════════════════════
+
+  function updatePipeline(agents) {
+    agents.forEach(function(a) { updateSingleAgent(a); });
+    var done = 0, running = 0, total = agents.length;
+    agents.forEach(function(a) {
+      if (a.status === 'done') done++;
+      if (a.status === 'running') running++;
+    });
+    txt('agentCountBadge', total + ' Agents');
+    var pDot = el('pipelineDot');
+    if (done === total) {
+      pDot.className = 'dot';
+      txt('pipelineStatusBadge', 'Pipeline Complete');
+    } else if (running > 0) {
+      pDot.className = 'dot warning';
+      txt('pipelineStatusBadge', running + ' Running, ' + done + '/' + total + ' Done');
+    } else {
+      pDot.className = 'dot';
+      txt('pipelineStatusBadge', 'Pipeline Ready');
+    }
+  }
+
+  function updateSingleAgent(agent) {
+    var node = document.querySelector('.agent-node[data-agent="' + agent.id + '"]');
+    if (!node) return;
+    node.className = 'agent-node ' + agent.status;
+    var latencyEl = node.querySelector('.latency');
+    if (latencyEl) latencyEl.textContent = agent.latency || '--';
+    var modelEl = node.querySelector('.model');
+    if (modelEl && agent.model) modelEl.textContent = agent.model;
+    var badge = node.querySelector('.agent-status-badge');
+    if (badge) {
+      badge.className = 'agent-status-badge ' + agent.status;
+      badge.textContent = agent.status;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // MARKET SIGNALS
+  // ═══════════════════════════════════════════════════════════════════
+
+  function formatPrice(price) {
+    if (price >= 1000) return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (price >= 1) return '$' + price.toFixed(2);
+    return '$' + price.toFixed(5);
+  }
+
+  function riskColor(score) {
+    if (score > 60) return 'var(--red)';
+    if (score > 35) return 'var(--yellow)';
+    return 'var(--green)';
+  }
+
+  function updateMarketSignals(signals) {
+    var tbody = el('signalsBody');
+    clearChildren(tbody);
+    txt('signalCount', signals.length + ' assets');
+
+    signals.forEach(function(s) {
+      var tr = document.createElement('tr');
+
+      // Symbol
+      var tdSym = createElement('td', 'symbol-cell', s.symbol);
+      tr.appendChild(tdSym);
+
+      // Price
+      var tdPrice = createElement('td', 'price-cell', formatPrice(s.price));
+      tr.appendChild(tdPrice);
+
+      // Change 24h
+      var dirClass = s.direction === 'bullish' ? 'bullish' : s.direction === 'bearish' ? 'bearish' : 'neutral';
+      var changeStr = (s.change_24h >= 0 ? '+' : '') + s.change_24h.toFixed(2) + '%';
+      var tdChange = createElement('td', dirClass, changeStr);
+      tr.appendChild(tdChange);
+
+      // Volatility
+      var tdVol = createElement('td', '', s.volatility.toFixed(2) + '%');
+      tr.appendChild(tdVol);
+
+      // Risk score + bar
+      var tdRisk = document.createElement('td');
+      var riskSpan = createElement('span', '', String(s.risk_score));
+      riskSpan.style.color = riskColor(s.risk_score);
+      riskSpan.style.fontWeight = '600';
+      tdRisk.appendChild(riskSpan);
+
+      var barContainer = createElement('div', 'risk-bar-container');
+      var barFill = createElement('div', 'risk-bar');
+      barFill.style.width = s.risk_score + '%';
+      barFill.style.background = riskColor(s.risk_score);
+      barContainer.appendChild(barFill);
+      tdRisk.appendChild(barContainer);
+      tr.appendChild(tdRisk);
+
+      // Direction
+      var tdDir = createElement('td', dirClass, s.direction);
+      tdDir.style.textTransform = 'capitalize';
+      tdDir.style.fontWeight = '500';
+      tr.appendChild(tdDir);
+
+      // Regime
+      var tdRegime = createElement('td', '', s.regime);
+      tdRegime.style.color = 'var(--text-dim)';
+      tdRegime.style.textTransform = 'capitalize';
+      tr.appendChild(tdRegime);
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // CONSENSUS
+  // ═══════════════════════════════════════════════════════════════════
+
+  function updateConsensus(consensus) {
+    var body = el('consensusBody');
+    clearChildren(body);
+
+    if (consensus.models_used) {
+      txt('consensusModels', consensus.models_used.join(' + '));
+    }
+
+    consensus.strategies.forEach(function(s, i) {
+      var isRec = (i === consensus.recommended_index);
+      var card = createElement('div', 'strategy-card' + (isRec ? ' recommended' : ''));
+
+      if (isRec) {
+        var recBadge = createElement('span', 'rec-badge', 'RECOMMENDED');
+        card.appendChild(recBadge);
+      }
+
+      var nameDiv = createElement('div', 'strategy-name', s.name);
+      card.appendChild(nameDiv);
+
+      var descDiv = createElement('div', 'strategy-desc', s.description);
+      card.appendChild(descDiv);
+
+      var metricsDiv = createElement('div', 'strategy-metrics');
+
+      var pairs = [
+        ['Conf:', s.confidence + '%', ''],
+        ['Cost:', s.cost_estimate_pct + '%', ''],
+        ['Risk-:', s.risk_reduction_pct + '%', ''],
+        ['E[R]:', '+' + s.expected_return_pct + '%', 'color:var(--green)'],
+      ];
+      pairs.forEach(function(p) {
+        var span = document.createElement('span');
+        var lbl = createElement('span', 'label', p[0] + ' ');
+        span.appendChild(lbl);
+        var val = createElement('span', 'value', p[1]);
+        if (p[2]) val.style.cssText = p[2];
+        span.appendChild(val);
+        metricsDiv.appendChild(span);
+      });
+
+      var riskLevelColor = s.risk_level === 'low' ? 'var(--green)' : s.risk_level === 'high' ? 'var(--red)' : 'var(--yellow)';
+      var rlSpan = createElement('span', '', s.risk_level.toUpperCase());
+      rlSpan.style.color = riskLevelColor;
+      rlSpan.style.fontWeight = '600';
+      rlSpan.style.textTransform = 'uppercase';
+      metricsDiv.appendChild(rlSpan);
+
+      card.appendChild(metricsDiv);
+
+      var track = createElement('div', 'confidence-bar-track');
+      var fill = createElement('div', 'confidence-bar-fill');
+      fill.style.width = s.confidence + '%';
+      track.appendChild(fill);
+      card.appendChild(track);
+
+      body.appendChild(card);
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // CLUSTER
+  // ═══════════════════════════════════════════════════════════════════
+
+  function updateCluster(nodes) {
+    var grid = el('clusterGrid');
+    clearChildren(grid);
+
+    var online = 0;
+    nodes.forEach(function(n) { if (n.online) online++; });
+    var onlineEl = el('clusterOnline');
+    onlineEl.textContent = online + '/' + nodes.length + ' online';
+    onlineEl.style.color = online === nodes.length ? 'var(--green)' : 'var(--yellow)';
+
+    nodes.forEach(function(n) {
+      var card = createElement('div', 'cluster-node ' + (n.online ? 'online' : 'offline'));
+
+      var nameDiv = createElement('div', '', n.name);
+      nameDiv.className = 'node-name';
+      card.appendChild(nameDiv);
+
+      var statusDiv = createElement('div', 'node-status');
+      var dot = createElement('span', 'dot' + (n.online ? '' : ' offline'));
+      dot.style.width = '5px';
+      dot.style.height = '5px';
+      statusDiv.appendChild(dot);
+
+      var latencyStr = n.online ? n.latency_ms + 'ms' : 'offline';
+      var latencyColor = !n.online ? 'var(--red)' : n.latency_ms < 60 ? 'var(--green)' : n.latency_ms < 150 ? 'var(--cyan)' : 'var(--yellow)';
+      var latSpan = createElement('span', 'node-latency', latencyStr);
+      latSpan.style.color = latencyColor;
+      statusDiv.appendChild(latSpan);
+      card.appendChild(statusDiv);
+
+      var modelDiv = createElement('div', 'node-model', n.model);
+      card.appendChild(modelDiv);
+
+      var gpuDiv = createElement('div', '', n.gpu || n.role);
+      gpuDiv.style.fontSize = '0.58rem';
+      gpuDiv.style.color = 'var(--text-dim)';
+      gpuDiv.style.marginTop = '2px';
+      card.appendChild(gpuDiv);
+
+      grid.appendChild(card);
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // GAUGES
+  // ═══════════════════════════════════════════════════════════════════
+
+  function gaugeColorCalc(value, invertGood) {
+    if (invertGood) {
+      if (value < 30) return 'var(--green)';
+      if (value < 60) return 'var(--yellow)';
+      return 'var(--red)';
+    } else {
+      if (value > 60) return 'var(--green)';
+      if (value > 35) return 'var(--yellow)';
+      return 'var(--red)';
+    }
+  }
+
+  function setGauge(circleId, textId, value, color) {
+    var circle = el(circleId);
+    var text = el(textId);
+    var circumference = 314.16;
+    var offset = circumference - (value / 100) * circumference;
+    circle.style.stroke = color;
+    circle.style.strokeDashoffset = String(offset);
+    text.textContent = String(value);
+  }
+
+  function updateGauges(gauges) {
+    setGauge('gaugeRisk', 'gaugeRiskVal', gauges.risk, gaugeColorCalc(gauges.risk, true));
+    setGauge('gaugeStress', 'gaugeStressVal', gauges.stress, gaugeColorCalc(gauges.stress, true));
+    setGauge('gaugeSentiment', 'gaugeSentimentVal', gauges.sentiment, gaugeColorCalc(gauges.sentiment, false));
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // STATS
+  // ═══════════════════════════════════════════════════════════════════
+
+  function updateStats(stats) {
+    txt('statAgents', String(stats.agents));
+    txt('statLatency', stats.latency);
+    txt('statAiria', String(stats.airia_calls));
+    txt('statSuccess', stats.success_rate);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // AUDIT TRAIL
+  // ═══════════════════════════════════════════════════════════════════
+
+  function createAuditEntry(time, agent, msg, latency) {
+    var entry = createElement('div', 'audit-entry');
+    entry.appendChild(createElement('span', 'audit-time', time));
+    entry.appendChild(createElement('span', 'audit-agent', agent));
+    entry.appendChild(createElement('span', 'audit-msg', msg));
+    if (latency) entry.appendChild(createElement('span', 'audit-latency', latency));
+    return entry;
+  }
+
+  function renderAuditLog(entries) {
+    var log = el('auditLog');
+    clearChildren(log);
+    entries.forEach(function(e) {
+      log.appendChild(createAuditEntry(e.time, e.agent, e.msg, e.latency));
+    });
+    txt('auditCount', entries.length + ' events');
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function addAuditEntry(agent, msg, latency) {
+    var log = el('auditLog');
+    var now = new Date();
+    var h = String(now.getHours()).padStart(2, '0');
+    var m = String(now.getMinutes()).padStart(2, '0');
+    var s = String(now.getSeconds()).padStart(2, '0');
+    var timeStr = h + ':' + m + ':' + s;
+    log.appendChild(createAuditEntry(timeStr, agent, msg, latency));
+    var count = log.querySelectorAll('.audit-entry').length;
+    txt('auditCount', count + ' events');
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // HITL APPROVAL
+  // ═══════════════════════════════════════════════════════════════════
+
+  function approveStrategy() {
+    var btnA = el('btnApprove');
+    var btnR = el('btnReject');
+    var result = el('hitlResult');
+
+    btnA.disabled = true;
+    btnR.disabled = true;
+
+    fetch(API_URL + '/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        run_id: currentRunId,
+        strategy_name: 'Moderate Hedging',
+        approved_by: 'dashboard_user',
+        comment: 'Approved via dashboard',
+      }),
+    }).catch(function() {});
+
+    result.className = 'hitl-result approved';
+    result.style.display = 'block';
+    result.textContent = 'STRATEGY APPROVED \u2014 Executing Moderate Hedging';
+    el('hitlIcon').textContent = '\u2705';
+    var statusText = el('hitlStatusText');
+    statusText.textContent = 'Approved';
+    statusText.style.color = 'var(--green)';
+
+    addAuditEntry('HITL', 'Strategy "Moderate Hedging" APPROVED by dashboard_user', '');
+  }
+
+  function rejectStrategy() {
+    var btnA = el('btnApprove');
+    var btnR = el('btnReject');
+    var result = el('hitlResult');
+
+    btnA.disabled = true;
+    btnR.disabled = true;
+
+    fetch(API_URL + '/reject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        run_id: currentRunId,
+        strategy_name: 'Moderate Hedging',
+        rejected_by: 'dashboard_user',
+        reason: 'Rejected via dashboard \u2014 requesting re-analysis',
+      }),
+    }).catch(function() {});
+
+    result.className = 'hitl-result rejected';
+    result.style.display = 'block';
+    result.textContent = 'STRATEGY REJECTED \u2014 Escalated for manual review';
+    el('hitlIcon').textContent = '\u274C';
+    var statusText = el('hitlStatusText');
+    statusText.textContent = 'Rejected';
+    statusText.style.color = 'var(--red)';
+
+    addAuditEntry('HITL', 'Strategy "Moderate Hedging" REJECTED by dashboard_user \u2014 escalated', '');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PIPELINE SIMULATION (Demo mode)
+  // ═══════════════════════════════════════════════════════════════════
+
+  function simulatePipelineProgress() {
+    var timeline = [
+      { delay: 3000,  agent: 'consensus_strategy', status: 'done',    latency: '2.8s',  auditAgent: 'Consensus',      auditMsg: '3 strategies finalized (74% consensus)',                   auditLat: '2.8s' },
+      { delay: 4000,  agent: 'position_sizer',     status: 'running', latency: '',       auditAgent: 'Position Sizer', auditMsg: 'Kelly Criterion + Risk Parity calculation',                auditLat: '' },
+      { delay: 6500,  agent: 'position_sizer',     status: 'done',    latency: '89ms',   auditAgent: 'Position Sizer', auditMsg: 'Optimal sizes: 3 positions, max 2% risk/trade',            auditLat: '89ms' },
+      { delay: 7000,  agent: 'strategy_backtester', status: 'running', latency: '',      auditAgent: 'Backtester',     auditMsg: 'Running 90-day backtest on M2/deepseek',                   auditLat: '' },
+      { delay: 10000, agent: 'strategy_backtester', status: 'done',   latency: '1.8s',   auditAgent: 'Backtester',     auditMsg: 'Backtest: Sharpe 1.42, MaxDD -8.3%, WinRate 67%',          auditLat: '1.8s' },
+      { delay: 10500, agent: 'compliance',          status: 'running', latency: '',      auditAgent: 'Compliance',     auditMsg: 'Airia compliance check initiated',                         auditLat: '' },
+      { delay: 13000, agent: 'compliance',          status: 'done',   latency: '420ms',  auditAgent: 'Compliance',     auditMsg: 'PASS \u2014 All strategies within risk limits',            auditLat: '420ms' },
+      { delay: 13500, agent: 'report_synthesizer',  status: 'running', latency: '',      auditAgent: 'Synthesizer',    auditMsg: 'Generating PDF report via M2+wkhtmltopdf',                 auditLat: '' },
+      { delay: 16000, agent: 'report_synthesizer',  status: 'done',   latency: '1.1s',   auditAgent: 'Synthesizer',    auditMsg: 'Report generated: sentinel_a3f8c7e21b04.pdf',              auditLat: '1.1s' },
+      { delay: 16500, agent: null,                                                        auditAgent: 'Orchestrator',   auditMsg: 'Pipeline COMPLETE \u2014 10/10 agents, total 9.4s, awaiting HITL approval', auditLat: '' },
+    ];
+
+    var timerVal = 4.8;
+    var timerEl = el('pipelineTimer');
+    var timerInterval = setInterval(function() {
+      timerVal += 0.1;
+      timerEl.textContent = timerVal.toFixed(1) + 's';
+    }, 100);
+
+    timeline.forEach(function(step) {
+      setTimeout(function() {
+        if (step.agent) {
+          updateSingleAgent({ id: step.agent, status: step.status, latency: step.latency });
+
+          // Recount pipeline status
+          var allDone = document.querySelectorAll('.agent-node.done').length;
+          var allRunning = document.querySelectorAll('.agent-node.running').length;
+          var total = document.querySelectorAll('.agent-node').length;
+          var pDot = el('pipelineDot');
+
+          if (allDone === total) {
+            pDot.className = 'dot';
+            txt('pipelineStatusBadge', 'Pipeline Complete');
+            clearInterval(timerInterval);
+            timerEl.textContent = '9.4s';
+            timerEl.style.color = 'var(--green)';
+            updateStats({ agents: 10, latency: '9.4s', airia_calls: 6, success_rate: '100%' });
+          } else if (allRunning > 0) {
+            pDot.className = 'dot warning';
+            txt('pipelineStatusBadge', allRunning + ' Running, ' + allDone + '/' + total + ' Done');
+          }
+        }
+
+        if (step.auditAgent) {
+          addAuditEntry(step.auditAgent, step.auditMsg, step.auditLat);
+        }
+      }, step.delay);
+    });
+
+    // Gauge animations
+    setTimeout(function() { updateGauges({ risk: 44, stress: 29, sentiment: 71 }); }, 8000);
+    setTimeout(function() { updateGauges({ risk: 41, stress: 26, sentiment: 74 }); }, 14000);
+
+    // Simulate small price movements
+    setTimeout(function() {
+      var updated = MOCK_SIGNALS.map(function(s) {
+        return Object.assign({}, s);
+      });
+      updated[0].price += 125.40;
+      updated[0].change_24h = 2.47;
+      updated[2].price -= 1.85;
+      updated[2].change_24h = -1.12;
+      updated[9].risk_score = 68;
+      updateMarketSignals(updated);
+    }, 7000);
+  }
+
+  // Make update functions globally accessible for external integrations
+  window.updatePipeline = updatePipeline;
+  window.updateMarketSignals = updateMarketSignals;
+  window.updateConsensus = updateConsensus;
+  window.updateCluster = updateCluster;
+  window.updateGauges = updateGauges;
+
+})();
+</script>
+</body>
+</html>

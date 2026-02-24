@@ -14,6 +14,7 @@ async def retry_request(
     method: str,
     url: str,
     json: dict | None = None,
+    headers: dict[str, str] | None = None,
     max_retries: int = 2,
     timeout: float | None = None,
 ) -> httpx.Response:
@@ -25,6 +26,8 @@ async def retry_request(
             kwargs: dict[str, Any] = {"url": url}
             if json:
                 kwargs["json"] = json
+            if headers:
+                kwargs["headers"] = headers
             if timeout:
                 kwargs["timeout"] = timeout
             if method == "GET":

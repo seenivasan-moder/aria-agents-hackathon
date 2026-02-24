@@ -76,7 +76,7 @@ class RoutingDecision:
 
 PROVIDERS = [
     ProviderProfile(
-        "M1", "http://127.0.0.1:1234", "qwen3-30b",
+        "M1", "http://10.5.0.2:1234", "qwen3-30b",
         [Capability.REASONING, Capability.CODE, Capability.CREATIVE, Capability.TRANSLATION],
         cost_per_1k_tokens=0.0, max_context=32768, priority=1,
     ),

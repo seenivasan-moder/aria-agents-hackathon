@@ -19,6 +19,13 @@ class ClusterNode:
     url: str
     role: str
     default_model: str = ""
+    api_key: str = ""
+
+    @property
+    def auth_headers(self) -> dict[str, str]:
+        if self.api_key:
+            return {"Authorization": f"Bearer {self.api_key}"}
+        return {}
 
 
 @dataclass
@@ -30,11 +37,22 @@ class SentinelConfig:
     consensus_pipeline_id: str = field(default_factory=lambda: os.getenv("AIRIA_CONSENSUS_PIPELINE_ID", ""))
     compliance_pipeline_id: str = field(default_factory=lambda: os.getenv("AIRIA_COMPLIANCE_PIPELINE_ID", ""))
 
-    # LM Studio cluster (127.0.0.1, NEVER localhost)
+    # LM Studio cluster (IP directes, NEVER localhost)
     lm_nodes: list[ClusterNode] = field(default_factory=lambda: [
         ClusterNode(
-            "M1", os.getenv("LM_STUDIO_URL", "http://127.0.0.1:1234"),
+            "M1", os.getenv("LM_STUDIO_M1_URL", "http://10.5.0.2:1234"),
             "deep_analysis", default_model="qwen/qwen3-30b-a3b-2507",
+            api_key=os.getenv("LM_STUDIO_M1_KEY", ""),
+        ),
+        ClusterNode(
+            "M1-QWQ", os.getenv("LM_STUDIO_M1_URL", "http://10.5.0.2:1234"),
+            "reasoning", default_model="qwen/qwq-32b",
+            api_key=os.getenv("LM_STUDIO_M1_KEY", ""),
+        ),
+        ClusterNode(
+            "M2", os.getenv("LM_STUDIO_M2_URL", "http://192.168.1.26:1234"),
+            "code_generation", default_model="deepseek-coder-v2-lite-instruct",
+            api_key=os.getenv("LM_STUDIO_M2_KEY", ""),
         ),
     ])
 
@@ -82,6 +100,16 @@ class SentinelConfig:
     # HITL
     hitl_port: int = field(default_factory=lambda: int(os.getenv("HITL_PORT", "8900")))
     hitl_webhook_url: str = field(default_factory=lambda: os.getenv("HITL_WEBHOOK_URL", ""))
+
+    # Dashboard
+    dashboard_port: int = field(default_factory=lambda: int(os.getenv("DASHBOARD_PORT", "8900")))
+
+    # Alert thresholds
+    alert_risk_high: float = 70.0
+    alert_risk_critical: float = 85.0
+
+    # Account
+    account_balance: float = 10_000.0
 
     def get_node(self, name: str) -> ClusterNode | None:
         for n in self.lm_nodes:

@@ -37,7 +37,7 @@ async def query_lm(
             "messages": messages,
             "temperature": temperature or config.temperature,
             "max_tokens": max_tokens or config.max_tokens,
-        })
+        }, headers=node.auth_headers or None)
         latency = (time.monotonic() - t0) * 1000
         track_latency(node_name, latency)
         data = r.json()
@@ -83,7 +83,7 @@ async def query_ollama(
 
 async def consensus(prompt: str, nodes: list[str] | None = None) -> dict[str, Any]:
     """Query multiple nodes in parallel and return all responses."""
-    nodes = nodes or ["M1", "OL1"]
+    nodes = nodes or ["M1", "M2", "OL1"]
     responses: list[dict[str, Any]] = []
 
     async def _query(name: str) -> dict[str, Any]:
@@ -115,7 +115,7 @@ async def cluster_health() -> dict[str, Any]:
     for n in config.lm_nodes:
         try:
             t0 = time.monotonic()
-            r = await client.get(f"{n.url}/v1/models", timeout=config.health_timeout)
+            r = await client.get(f"{n.url}/v1/models", timeout=config.health_timeout, headers=n.auth_headers)
             r.raise_for_status()
             latency = int((time.monotonic() - t0) * 1000)
             models = [m["id"] for m in r.json().get("data", [])]

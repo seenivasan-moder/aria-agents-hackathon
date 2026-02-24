@@ -1,4 +1,4 @@
-"""Sentinel Orchestrator — runs the 4-agent pipeline end-to-end."""
+"""Sentinel Orchestrator — runs the 4-agent and 10-agent pipelines end-to-end."""
 
 from __future__ import annotations
 
@@ -15,6 +15,8 @@ from src.models import SentinelReport
 from src import database as db
 from src.airia_bridge import bridge
 from src.agents import market_intelligence, corporate_context, consensus_strategy, compliance_docs
+from src.agents.sentinel import anomaly_detector, sentiment_scorer, risk_aggregator, position_sizer
+from src.agents.sentinel import backtester, report_synthesizer, alert_agent
 from src.agents.meta import meta_router, context_manager, quality_auditor
 from src.agents.organizer import librarian, dedup_agent
 from src.agents.jarvis import intent_classifier, execution_engine
@@ -87,6 +89,178 @@ async def run_scan_only() -> list:
     console.print("[bold]Running market scan only...[/]")
     signals = await market_intelligence.run(run_id)
     return signals
+
+
+async def run_full_pipeline_v2() -> SentinelReport:
+    """Execute the enhanced 10-agent Sentinel pipeline.
+
+    Phases:
+        1 (parallel): Market Intelligence + Corporate Context + Anomaly Detector + Sentiment Scorer
+        2 (sequential): Risk Aggregator (uses signals from Phase 1)
+        3 (parallel): Consensus Strategy + Position Sizer (both use Phase 1+2 data)
+        4 (sequential): Strategy Backtester (uses consensus strategies)
+        5 (parallel): Compliance Docs + Report Synthesizer + Alert Agent
+    """
+    run_id = uuid.uuid4().hex[:12]
+    t0 = time.monotonic()
+
+    console.print(Panel(
+        f"[bold white]AIRIA SENTINEL — Full Pipeline v2 (10 Agents)[/]\n"
+        f"Run ID: {run_id}\n"
+        f"Company: {config.company_id}\n"
+        f"Airia: {'connected' if bridge.is_available else 'local-only'}",
+        title="[bold cyan]Starting v2[/]",
+        border_style="cyan",
+    ))
+
+    # Initialize database
+    db.init_db()
+
+    # ── Phase 1: Market Intelligence + Corporate Context + Anomaly Detector + Sentiment Scorer (parallel) ──
+    console.print("\n[bold]Phase 1/5:[/] Market Intelligence + Corporate Context + Anomaly Detector + Sentiment Scorer (parallel)")
+
+    # Market Intelligence and Corporate Context run first (they produce the raw signals)
+    signals, exposure = await asyncio.gather(
+        market_intelligence.run(run_id),
+        corporate_context.run(run_id),
+    )
+
+    # Convert MarketSignal objects to dicts for sentinel agents
+    signal_dicts = [{"symbol": s.symbol, "asset_class": s.asset_class, "price": s.price,
+                     "change_1h": s.change_1h, "change_24h": s.change_24h, "change_7d": s.change_7d,
+                     "volume_24h": s.volume_24h, "volatility": s.volatility, "risk_score": s.risk_score,
+                     "direction": s.direction.value, "regime": s.regime.value} for s in signals]
+
+    # Now run Anomaly Detector + Sentiment Scorer in parallel on the signal dicts
+    anomaly_result, sentiment_result = await asyncio.gather(
+        anomaly_detector.run(run_id, signal_dicts),
+        sentiment_scorer.run(run_id, signal_dicts),
+    )
+
+    # ── Phase 2: Risk Aggregator (sequential — uses Phase 1 outputs) ──
+    console.print("\n[bold]Phase 2/5:[/] Risk Aggregator (fusion multi-source)")
+
+    risk_signals = []
+    for sd in signal_dicts:
+        risk_signals.append({**sd, "source": "market_intelligence"})
+    # Add corporate exposure as risk signal
+    risk_signals.append({
+        "source": "corporate_context",
+        "risk_score": exposure.risk_score,
+        "direction": "neutral",
+        "symbol": "CORPORATE",
+        "asset_class": "corporate",
+    })
+
+    risk_agg_result = await risk_aggregator.run(run_id, risk_signals)
+    risk_profile_data = risk_agg_result.data
+
+    # ── Phase 3: Consensus Strategy + Position Sizer (parallel) ──
+    console.print("\n[bold]Phase 3/5:[/] Consensus Strategy + Position Sizer (parallel)")
+
+    consensus_result, position_result = await asyncio.gather(
+        consensus_strategy.run(run_id, signals, exposure),
+        position_sizer.run(run_id, risk_profile_data, account_balance=config.account_balance),
+    )
+
+    # ── Phase 4: Strategy Backtester (sequential — uses consensus strategies) ──
+    console.print("\n[bold]Phase 4/5:[/] Strategy Backtester")
+
+    # Convert strategies to list of dicts for the backtester
+    strategies_dicts = [
+        s.model_dump() if hasattr(s, "model_dump") else s
+        for s in consensus_result.strategies
+    ]
+    backtest_result = await backtester.run(run_id, strategies_dicts)
+
+    # ── Phase 5: Compliance Docs + Report Synthesizer + Alert Agent (parallel) ──
+    console.print("\n[bold]Phase 5/5:[/] Compliance Docs + Report Synthesizer + Alert Agent (parallel)")
+
+    # Prepare all_results_dict for report_synthesizer
+    all_results_dict = {
+        "market_intelligence": {"signals_count": len(signals), "status": "success"},
+        "corporate_context": {"risk_score": exposure.risk_score, "company": exposure.company_id, "status": "success"},
+        "anomaly_detection": anomaly_result.data or {},
+        "sentiment_scoring": sentiment_result.data or {},
+        "risk_aggregation": risk_profile_data or {},
+        "consensus_strategy": {
+            "strategies_count": len(consensus_result.strategies),
+            "recommended": consensus_result.strategies[consensus_result.recommended_index].name if consensus_result.strategies else "N/A",
+            "consensus_score": consensus_result.consensus_score,
+            "status": "success",
+        },
+        "position_sizing": position_result.data or {},
+        "backtesting": backtest_result.data or {},
+    }
+
+    # Prepare anomaly data for alert agent
+    anomaly_data = anomaly_result.data.get("anomalies", []) if anomaly_result.data else []
+
+    report, synthesis_result, alert_result = await asyncio.gather(
+        compliance_docs.run(run_id, signals, exposure, consensus_result),
+        report_synthesizer.run(run_id, all_results_dict),
+        alert_agent.run(run_id, risk_profile_data, anomaly_data),
+    )
+
+    total_time = (time.monotonic() - t0) * 1000
+
+    db.save_audit(
+        run_id, "pipeline_v2_complete", "orchestrator",
+        output_summary=(
+            f"Total: {int(total_time)}ms, {len(signals)} signals, "
+            f"{len(consensus_result.strategies)} strategies, "
+            f"risk={risk_profile_data.get('overall_risk', 0):.0f}, "
+            f"anomalies={anomaly_result.data.get('anomaly_rate', 0) if anomaly_result.data else 0:.1f}%, "
+            f"alerts={alert_result.data.get('total_alerts', 0) if alert_result.data else 0}, "
+            f"10 agents, PDF generated"
+        ),
+        latency_ms=total_time,
+    )
+
+    # ── Summary panel showing ALL 10 agent results ──
+    recommended_name = (
+        consensus_result.strategies[consensus_result.recommended_index].name
+        if consensus_result.strategies else "N/A"
+    )
+    overall_risk = risk_profile_data.get("overall_risk", 0) if risk_profile_data else 0
+    alert_level = risk_profile_data.get("alert_level", "?") if risk_profile_data else "?"
+    anomaly_rate = anomaly_result.data.get("anomaly_rate", 0) if anomaly_result.data else 0
+    stress_index = anomaly_result.data.get("market_stress_index", 0) if anomaly_result.data else 0
+    global_sentiment = sentiment_result.data.get("global_sentiment", 0) if sentiment_result.data else 0
+    global_label = sentiment_result.data.get("global_label", "?") if sentiment_result.data else "?"
+    total_allocated = position_result.data.get("total_allocated_pct", 0) if position_result.data else 0
+    best_strategy = backtest_result.data.get("best_strategy", "?") if backtest_result.data else "?"
+    synth_risk_level = synthesis_result.data.get("risk_level", "?") if synthesis_result.data else "?"
+    total_alerts = alert_result.data.get("total_alerts", 0) if alert_result.data else 0
+    critical_alerts = alert_result.data.get("critical_count", 0) if alert_result.data else 0
+
+    console.print(Panel(
+        f"[bold green]Pipeline v2 Complete — 10 Agents[/]\n"
+        f"Run ID: {run_id}\n\n"
+        f"[bold]1. Market Intelligence:[/]  {len(signals)} signals scanned\n"
+        f"[bold]2. Corporate Context:[/]    Risk: {exposure.risk_score:.0f}/100\n"
+        f"[bold]3. Anomaly Detector:[/]     Rate: {anomaly_rate:.1f}%, Stress: {stress_index:.0f}\n"
+        f"[bold]4. Sentiment Scorer:[/]     Global: {global_sentiment:+.0f} ({global_label})\n"
+        f"[bold]5. Risk Aggregator:[/]      Risk: {overall_risk:.0f}/100, Alert: {alert_level}\n"
+        f"[bold]6. Consensus Strategy:[/]   {len(consensus_result.strategies)} strategies, Best: {recommended_name}\n"
+        f"[bold]7. Position Sizer:[/]       Allocated: {total_allocated:.1f}%\n"
+        f"[bold]8. Strategy Backtester:[/]  Best backtest: {best_strategy}\n"
+        f"[bold]9. Compliance Docs:[/]      PDF: {report.pdf_path}\n"
+        f"[bold]10. Report Synthesizer:[/]  Risk level: {synth_risk_level}\n"
+        f"[bold]11. Alert Agent:[/]         {total_alerts} alerts ({critical_alerts} critical)\n\n"
+        f"Total Time: {int(total_time)}ms\n"
+        f"HITL: [yellow]Approval pending[/]",
+        title="[bold green]Pipeline v2 Done[/]",
+        border_style="green",
+    ))
+
+    return report
+
+
+def run_dashboard():
+    """Start the HITL dashboard server with WebSocket support."""
+    from src.services.dashboard_ws import start_dashboard_server
+    start_dashboard_server()
 
 
 async def run_meta_exchange(prompt: str = "Analyse ce code Python et explique les bonnes pratiques") -> dict:
