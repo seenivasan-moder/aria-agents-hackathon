@@ -1,4 +1,4 @@
-"""Sentinel Orchestrator — runs the 4-agent and 10-agent pipelines end-to-end."""
+"""Sentinel Orchestrator — runs the 4-agent and 16-agent pipelines end-to-end."""
 
 from __future__ import annotations
 
@@ -17,6 +17,8 @@ from src.airia_bridge import bridge
 from src.agents import market_intelligence, corporate_context, consensus_strategy, compliance_docs
 from src.agents.sentinel import anomaly_detector, sentiment_scorer, risk_aggregator, position_sizer
 from src.agents.sentinel import backtester, report_synthesizer, alert_agent
+from src.agents.sentinel import liquidity_analyzer, correlation_matrix, volatility_forecaster
+from src.agents.sentinel import news_scanner, portfolio_optimizer, execution_strategist
 from src.agents.meta import meta_router, context_manager, quality_auditor
 from src.agents.organizer import librarian, dedup_agent
 from src.agents.jarvis import intent_classifier, execution_engine
@@ -92,20 +94,21 @@ async def run_scan_only() -> list:
 
 
 async def run_full_pipeline_v2() -> SentinelReport:
-    """Execute the enhanced 10-agent Sentinel pipeline.
+    """Execute the enhanced 16-agent Sentinel pipeline.
 
     Phases:
-        1 (parallel): Market Intelligence + Corporate Context + Anomaly Detector + Sentiment Scorer
-        2 (sequential): Risk Aggregator (uses signals from Phase 1)
-        3 (parallel): Consensus Strategy + Position Sizer (both use Phase 1+2 data)
-        4 (sequential): Strategy Backtester (uses consensus strategies)
-        5 (parallel): Compliance Docs + Report Synthesizer + Alert Agent
+        1 (parallel): Market Intelligence + Corporate Context, then
+                       Anomaly Detector + Sentiment Scorer + Liquidity Analyzer + News Scanner
+        2 (parallel): Risk Aggregator + Correlation Matrix + Volatility Forecaster
+        3 (parallel): Consensus Strategy + Position Sizer
+        4 (parallel): Strategy Backtester + Portfolio Optimizer
+        5 (parallel): Compliance Docs + Report Synthesizer + Alert Agent + Execution Strategist
     """
     run_id = uuid.uuid4().hex[:12]
     t0 = time.monotonic()
 
     console.print(Panel(
-        f"[bold white]AIRIA SENTINEL — Full Pipeline v2 (10 Agents)[/]\n"
+        f"[bold white]AIRIA SENTINEL — Full Pipeline v2 (16 Agents)[/]\n"
         f"Run ID: {run_id}\n"
         f"Company: {config.company_id}\n"
         f"Airia: {'connected' if bridge.is_available else 'local-only'}",
@@ -116,8 +119,8 @@ async def run_full_pipeline_v2() -> SentinelReport:
     # Initialize database
     db.init_db()
 
-    # ── Phase 1: Market Intelligence + Corporate Context + Anomaly Detector + Sentiment Scorer (parallel) ──
-    console.print("\n[bold]Phase 1/5:[/] Market Intelligence + Corporate Context + Anomaly Detector + Sentiment Scorer (parallel)")
+    # ── Phase 1: GATHER (parallel) ──
+    console.print("\n[bold]Phase 1/5:[/] Market Intelligence + Corporate Context + Anomaly + Sentiment + Liquidity + News (parallel)")
 
     # Market Intelligence and Corporate Context run first (they produce the raw signals)
     signals, exposure = await asyncio.gather(
@@ -131,19 +134,20 @@ async def run_full_pipeline_v2() -> SentinelReport:
                      "volume_24h": s.volume_24h, "volatility": s.volatility, "risk_score": s.risk_score,
                      "direction": s.direction.value, "regime": s.regime.value} for s in signals]
 
-    # Now run Anomaly Detector + Sentiment Scorer in parallel on the signal dicts
-    anomaly_result, sentiment_result = await asyncio.gather(
+    # Run 4 analysis agents in parallel on the signal dicts
+    anomaly_result, sentiment_result, liquidity_result, news_result = await asyncio.gather(
         anomaly_detector.run(run_id, signal_dicts),
         sentiment_scorer.run(run_id, signal_dicts),
+        liquidity_analyzer.run(run_id, signal_dicts),
+        news_scanner.run(run_id, signal_dicts),
     )
 
-    # ── Phase 2: Risk Aggregator (sequential — uses Phase 1 outputs) ──
-    console.print("\n[bold]Phase 2/5:[/] Risk Aggregator (fusion multi-source)")
+    # ── Phase 2: ANALYZE (parallel) ──
+    console.print("\n[bold]Phase 2/5:[/] Risk Aggregator + Correlation Matrix + Volatility Forecaster (parallel)")
 
     risk_signals = []
     for sd in signal_dicts:
         risk_signals.append({**sd, "source": "market_intelligence"})
-    # Add corporate exposure as risk signal
     risk_signals.append({
         "source": "corporate_context",
         "risk_score": exposure.risk_score,
@@ -152,10 +156,14 @@ async def run_full_pipeline_v2() -> SentinelReport:
         "asset_class": "corporate",
     })
 
-    risk_agg_result = await risk_aggregator.run(run_id, risk_signals)
+    risk_agg_result, corr_result, vol_result = await asyncio.gather(
+        risk_aggregator.run(run_id, risk_signals),
+        correlation_matrix.run(run_id, signal_dicts),
+        volatility_forecaster.run(run_id, signal_dicts),
+    )
     risk_profile_data = risk_agg_result.data
 
-    # ── Phase 3: Consensus Strategy + Position Sizer (parallel) ──
+    # ── Phase 3: STRATEGIZE (parallel) ──
     console.print("\n[bold]Phase 3/5:[/] Consensus Strategy + Position Sizer (parallel)")
 
     consensus_result, position_result = await asyncio.gather(
@@ -163,18 +171,20 @@ async def run_full_pipeline_v2() -> SentinelReport:
         position_sizer.run(run_id, risk_profile_data, account_balance=config.account_balance),
     )
 
-    # ── Phase 4: Strategy Backtester (sequential — uses consensus strategies) ──
-    console.print("\n[bold]Phase 4/5:[/] Strategy Backtester")
+    # ── Phase 4: VALIDATE (parallel) ──
+    console.print("\n[bold]Phase 4/5:[/] Strategy Backtester + Portfolio Optimizer (parallel)")
 
-    # Convert strategies to list of dicts for the backtester
     strategies_dicts = [
         s.model_dump() if hasattr(s, "model_dump") else s
         for s in consensus_result.strategies
     ]
-    backtest_result = await backtester.run(run_id, strategies_dicts)
+    backtest_result, optimizer_result = await asyncio.gather(
+        backtester.run(run_id, strategies_dicts),
+        portfolio_optimizer.run(run_id, signal_dicts, current_positions=position_result.data),
+    )
 
-    # ── Phase 5: Compliance Docs + Report Synthesizer + Alert Agent (parallel) ──
-    console.print("\n[bold]Phase 5/5:[/] Compliance Docs + Report Synthesizer + Alert Agent (parallel)")
+    # ── Phase 5: REPORT (parallel) ──
+    console.print("\n[bold]Phase 5/5:[/] Compliance + Report + Alerts + Execution (parallel)")
 
     # Prepare all_results_dict for report_synthesizer
     all_results_dict = {
@@ -182,7 +192,11 @@ async def run_full_pipeline_v2() -> SentinelReport:
         "corporate_context": {"risk_score": exposure.risk_score, "company": exposure.company_id, "status": "success"},
         "anomaly_detection": anomaly_result.data or {},
         "sentiment_scoring": sentiment_result.data or {},
+        "liquidity_analysis": liquidity_result.data or {},
+        "news_scanning": news_result.data or {},
         "risk_aggregation": risk_profile_data or {},
+        "correlation_matrix": corr_result.data or {},
+        "volatility_forecast": vol_result.data or {},
         "consensus_strategy": {
             "strategies_count": len(consensus_result.strategies),
             "recommended": consensus_result.strategies[consensus_result.recommended_index].name if consensus_result.strategies else "N/A",
@@ -191,15 +205,17 @@ async def run_full_pipeline_v2() -> SentinelReport:
         },
         "position_sizing": position_result.data or {},
         "backtesting": backtest_result.data or {},
+        "portfolio_optimization": optimizer_result.data or {},
     }
 
-    # Prepare anomaly data for alert agent
     anomaly_data = anomaly_result.data.get("anomalies", []) if anomaly_result.data else []
+    positions_list = position_result.data.get("positions", []) if position_result.data else []
 
-    report, synthesis_result, alert_result = await asyncio.gather(
+    report, synthesis_result, alert_result, exec_result = await asyncio.gather(
         compliance_docs.run(run_id, signals, exposure, consensus_result),
         report_synthesizer.run(run_id, all_results_dict),
         alert_agent.run(run_id, risk_profile_data, anomaly_data),
+        execution_strategist.run(run_id, positions_list, signal_dicts),
     )
 
     total_time = (time.monotonic() - t0) * 1000
@@ -210,14 +226,12 @@ async def run_full_pipeline_v2() -> SentinelReport:
             f"Total: {int(total_time)}ms, {len(signals)} signals, "
             f"{len(consensus_result.strategies)} strategies, "
             f"risk={risk_profile_data.get('overall_risk', 0):.0f}, "
-            f"anomalies={anomaly_result.data.get('anomaly_rate', 0) if anomaly_result.data else 0:.1f}%, "
-            f"alerts={alert_result.data.get('total_alerts', 0) if alert_result.data else 0}, "
-            f"10 agents, PDF generated"
+            f"16 agents, PDF generated"
         ),
         latency_ms=total_time,
     )
 
-    # ── Summary panel showing ALL 10 agent results ──
+    # ── Summary panel showing ALL 16 agent results ──
     recommended_name = (
         consensus_result.strategies[consensus_result.recommended_index].name
         if consensus_result.strategies else "N/A"
@@ -233,24 +247,41 @@ async def run_full_pipeline_v2() -> SentinelReport:
     synth_risk_level = synthesis_result.data.get("risk_level", "?") if synthesis_result.data else "?"
     total_alerts = alert_result.data.get("total_alerts", 0) if alert_result.data else 0
     critical_alerts = alert_result.data.get("critical_count", 0) if alert_result.data else 0
+    liq_index = liquidity_result.data.get("overall_liquidity_index", 0) if liquidity_result.data else 0
+    corr_regime = corr_result.data.get("regime", "?") if corr_result.data else "?"
+    portfolio_var = vol_result.data.get("portfolio_var_95", 0) if vol_result.data else 0
+    max_sharpe = optimizer_result.data.get("max_sharpe", {}).get("sharpe_ratio", 0) if optimizer_result.data else 0
+    exec_cost = exec_result.data.get("total_cost_bps", 0) if exec_result.data else 0
+    news_sentiment = news_result.data.get("aggregate_sentiment", 0) if news_result.data else 0
 
     console.print(Panel(
-        f"[bold green]Pipeline v2 Complete — 10 Agents[/]\n"
+        f"[bold green]Pipeline v2 Complete — 16 Agents[/]\n"
         f"Run ID: {run_id}\n\n"
-        f"[bold]1. Market Intelligence:[/]  {len(signals)} signals scanned\n"
-        f"[bold]2. Corporate Context:[/]    Risk: {exposure.risk_score:.0f}/100\n"
-        f"[bold]3. Anomaly Detector:[/]     Rate: {anomaly_rate:.1f}%, Stress: {stress_index:.0f}\n"
-        f"[bold]4. Sentiment Scorer:[/]     Global: {global_sentiment:+.0f} ({global_label})\n"
-        f"[bold]5. Risk Aggregator:[/]      Risk: {overall_risk:.0f}/100, Alert: {alert_level}\n"
-        f"[bold]6. Consensus Strategy:[/]   {len(consensus_result.strategies)} strategies, Best: {recommended_name}\n"
-        f"[bold]7. Position Sizer:[/]       Allocated: {total_allocated:.1f}%\n"
-        f"[bold]8. Strategy Backtester:[/]  Best backtest: {best_strategy}\n"
-        f"[bold]9. Compliance Docs:[/]      PDF: {report.pdf_path}\n"
-        f"[bold]10. Report Synthesizer:[/]  Risk level: {synth_risk_level}\n"
-        f"[bold]11. Alert Agent:[/]         {total_alerts} alerts ({critical_alerts} critical)\n\n"
+        f"[bold cyan]Phase 1 — GATHER[/]\n"
+        f"  [bold]1. Market Intelligence:[/]   {len(signals)} signals scanned\n"
+        f"  [bold]2. Corporate Context:[/]     Risk: {exposure.risk_score:.0f}/100\n"
+        f"  [bold]3. Anomaly Detector:[/]      Rate: {anomaly_rate:.1f}%, Stress: {stress_index:.0f}\n"
+        f"  [bold]4. Sentiment Scorer:[/]      Global: {global_sentiment:+.0f} ({global_label})\n"
+        f"  [bold]5. Liquidity Analyzer:[/]    Index: {liq_index:.0f}/100\n"
+        f"  [bold]6. News Scanner:[/]          Sentiment: {news_sentiment:+.0f}\n\n"
+        f"[bold cyan]Phase 2 — ANALYZE[/]\n"
+        f"  [bold]7. Risk Aggregator:[/]       Risk: {overall_risk:.0f}/100, Alert: {alert_level}\n"
+        f"  [bold]8. Correlation Matrix:[/]    Regime: {corr_regime}\n"
+        f"  [bold]9. Volatility Forecaster:[/] VaR 95%: {portfolio_var:.2%}\n\n"
+        f"[bold cyan]Phase 3 — STRATEGIZE[/]\n"
+        f"  [bold]10. Consensus Strategy:[/]   {len(consensus_result.strategies)} strategies, Best: {recommended_name}\n"
+        f"  [bold]11. Position Sizer:[/]       Allocated: {total_allocated:.1f}%\n\n"
+        f"[bold cyan]Phase 4 — VALIDATE[/]\n"
+        f"  [bold]12. Strategy Backtester:[/]  Best: {best_strategy}\n"
+        f"  [bold]13. Portfolio Optimizer:[/]   Max Sharpe: {max_sharpe:.2f}\n\n"
+        f"[bold cyan]Phase 5 — REPORT[/]\n"
+        f"  [bold]14. Compliance Docs:[/]      PDF: {report.pdf_path}\n"
+        f"  [bold]15. Report Synthesizer:[/]   Risk level: {synth_risk_level}\n"
+        f"  [bold]16. Alert Agent:[/]          {total_alerts} alerts ({critical_alerts} critical)\n"
+        f"  [bold]17. Execution Strategist:[/] Cost: {exec_cost:.1f} bps\n\n"
         f"Total Time: {int(total_time)}ms\n"
         f"HITL: [yellow]Approval pending[/]",
-        title="[bold green]Pipeline v2 Done[/]",
+        title="[bold green]Pipeline v2 Done — 16 Agents[/]",
         border_style="green",
     ))
 
