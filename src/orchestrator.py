@@ -249,10 +249,13 @@ async def run_full_pipeline_v2() -> SentinelReport:
     critical_alerts = alert_result.data.get("critical_count", 0) if alert_result.data else 0
     liq_index = liquidity_result.data.get("overall_liquidity_index", 0) if liquidity_result.data else 0
     corr_regime = corr_result.data.get("regime", "?") if corr_result.data else "?"
-    portfolio_var = vol_result.data.get("portfolio_var_95", 0) if vol_result.data else 0
+    portfolio_var_data = vol_result.data.get("portfolio_var", {}) if vol_result.data else {}
+    portfolio_var = portfolio_var_data.get("var_95_pct", 0) if isinstance(portfolio_var_data, dict) else 0
     max_sharpe = optimizer_result.data.get("max_sharpe", {}).get("sharpe_ratio", 0) if optimizer_result.data else 0
     exec_cost = exec_result.data.get("total_cost_bps", 0) if exec_result.data else 0
-    news_sentiment = news_result.data.get("aggregate_sentiment", 0) if news_result.data else 0
+    news_sentiment = news_result.data.get("global_sentiment", 0) if news_result.data else 0
+    if not isinstance(news_sentiment, (int, float)):
+        news_sentiment = 0
 
     console.print(Panel(
         f"[bold green]Pipeline v2 Complete — 16 Agents[/]\n"
@@ -267,7 +270,7 @@ async def run_full_pipeline_v2() -> SentinelReport:
         f"[bold cyan]Phase 2 — ANALYZE[/]\n"
         f"  [bold]7. Risk Aggregator:[/]       Risk: {overall_risk:.0f}/100, Alert: {alert_level}\n"
         f"  [bold]8. Correlation Matrix:[/]    Regime: {corr_regime}\n"
-        f"  [bold]9. Volatility Forecaster:[/] VaR 95%: {portfolio_var:.2%}\n\n"
+        f"  [bold]9. Volatility Forecaster:[/] VaR 95%: {portfolio_var:.3f}%\n\n"
         f"[bold cyan]Phase 3 — STRATEGIZE[/]\n"
         f"  [bold]10. Consensus Strategy:[/]   {len(consensus_result.strategies)} strategies, Best: {recommended_name}\n"
         f"  [bold]11. Position Sizer:[/]       Allocated: {total_allocated:.1f}%\n\n"
